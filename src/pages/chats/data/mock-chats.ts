@@ -1,0 +1,105 @@
+import { Chat } from '@/types';
+
+export const mockChats: Chat[] = [
+  {
+    id: '1',
+    type: 'regular',
+    user: {
+      id: 'user1',
+      username: 'john_doe',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
+      joinedAt: new Date('2024-01-01'),
+    },
+    model: {
+      id: 'model1',
+      firstName: 'Alice',
+      lastName: 'Smith',
+      nickname: 'alice',
+      quote: 'Living life to the fullest',
+      height: 170,
+      weight: 55,
+      languages: ['English', 'Spanish'],
+      chatLink: 'https://t.me/alice',
+      profileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice',
+    },
+    lastMessage: 'Looking forward to our next photoshoot!',
+    lastMessageAt: new Date('2024-03-15T10:30:00'),
+    messages: [
+      {
+        id: 'm1',
+        senderId: 'user1',
+        text: 'Hi Alice! I loved your recent photos',
+        timestamp: new Date('2024-03-15T10:00:00'),
+      },
+      {
+        id: 'm2',
+        senderId: 'model1',
+        text: 'Thank you so much! I had a great time at that shoot',
+        timestamp: new Date('2024-03-15T10:15:00'),
+      },
+      {
+        id: 'm3',
+        senderId: 'user1',
+        text: 'When is your next photoshoot planned?',
+        timestamp: new Date('2024-03-15T10:25:00'),
+      },
+      {
+        id: 'm4',
+        senderId: 'model1',
+        text: 'Looking forward to our next photoshoot!',
+        timestamp: new Date('2024-03-15T10:30:00'),
+      },
+    ],
+  },
+  {
+    id: '2',
+    type: 'photo_request',
+    user: {
+      id: 'user2',
+      username: 'emma_wilson',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma',
+      joinedAt: new Date('2024-02-15'),
+    },
+    model: {
+      id: 'model2',
+      firstName: 'Sophie',
+      lastName: 'Brown',
+      nickname: 'sophie',
+      quote: 'Capturing moments',
+      height: 168,
+      weight: 52,
+      languages: ['English', 'French'],
+      chatLink: 'https://t.me/sophie',
+      profileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sophie',
+    },
+    lastMessage: 'Here are the photos you requested!',
+    lastMessageAt: new Date('2024-03-16T14:30:00'),
+    messages: [
+      {
+        id: 'm5',
+        senderId: 'user2',
+        text: 'Hi Sophie! Could you send me some exclusive photos?',
+        timestamp: new Date('2024-03-16T14:00:00'),
+      },
+      {
+        id: 'm6',
+        senderId: 'model2',
+        text: 'Of course! What kind of photos are you looking for?',
+        timestamp: new Date('2024-03-16T14:10:00'),
+      },
+      {
+        id: 'm7',
+        senderId: 'user2',
+        text: 'Something casual and natural would be great!',
+        timestamp: new Date('2024-03-16T14:20:00'),
+      },
+      {
+        id: 'm8',
+        senderId: 'model2',
+        text: 'Here are the photos you requested!',
+        image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80',
+        timestamp: new Date('2024-03-16T14:30:00'),
+      },
+    ],
+  },
+];
