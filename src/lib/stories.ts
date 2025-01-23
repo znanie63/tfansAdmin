@@ -10,7 +10,6 @@ interface StoryRecord {
   model_id: string;
   image_path: string;
   created_at: string;
-  expires_at: string;
 }
 
 function transformStoryFromDB(record: StoryRecord): Story {
@@ -18,8 +17,7 @@ function transformStoryFromDB(record: StoryRecord): Story {
     id: record.id,
     modelId: record.model_id,
     image: record.image_path,
-    createdAt: new Date(record.created_at),
-    expiresAt: new Date(record.expires_at),
+    createdAt: new Date(record.created_at)
   };
 }
 
@@ -60,14 +58,11 @@ export async function uploadStoryImage(file: File): Promise<string> {
 }
 
 export async function createStory(modelId: string, data: { image: string }): Promise<Story> {
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
-
   const { data: story, error } = await supabase
     .from('stories')
     .insert({
       model_id: modelId,
-      image_path: data.image,
-      expires_at: expiresAt.toISOString(),
+      image_path: data.image
     })
     .select()
     .single();
@@ -93,13 +88,10 @@ export async function deleteStory(id: string): Promise<void> {
 }
 
 export async function getModelStories(modelId: string): Promise<Story[]> {
-  const now = new Date().toISOString();
-
   const { data, error } = await supabase
     .from('stories')
     .select('*')
     .eq('model_id', modelId)
-    .gt('expires_at', now)
     .order('created_at', { ascending: false });
 
   if (error) {

@@ -53,7 +53,6 @@ export interface Story {
   modelId: string;
   image: string;
   createdAt: Date;
-  expiresAt: Date;
 }
 
 export interface User {
