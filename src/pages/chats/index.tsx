@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { ChatList } from './components/chat-list';
 import { ChatView } from './components/chat-view';
-import { mockChats } from './data/mock-chats';
+import { getChats, sendMessage, uploadChatImage } from '@/lib/chats';
+import { Chat } from '@/types';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function Chats() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const selectedChat = mockChats.find(chat => chat.id === selectedChatId);
+  const selectedChat = chats.find(chat => chat.id === selectedChatId);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -21,9 +25,34 @@ export function Chats() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    loadChats();
+  }, []);
+
+  const loadChats = async () => {
+    try {
+      setLoading(true);
+      const data = await getChats();
+      setChats(data);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+      toast.error('Failed to load chats');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBackToList = () => {
     setSelectedChatId(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
@@ -39,7 +68,7 @@ export function Chats() {
           isMobileView && selectedChat && "absolute inset-0 transform -translate-x-full opacity-0 pointer-events-none"
         )}>
           <ChatList
-            chats={mockChats}
+            chats={chats}
             selectedChatId={selectedChatId}
             onSelectChat={setSelectedChatId}
           />
@@ -53,6 +82,7 @@ export function Chats() {
           {selectedChat ? (
             <ChatView 
               chat={selectedChat}
+              onMessageSent={loadChats}
               onBack={isMobileView ? handleBackToList : undefined} />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">

@@ -11,13 +11,20 @@ export interface Model {
   chatLink: string;
   instagramLink?: string;
   otherSocialLink?: string;
-  personality?: {
-    communicationStyle: string;
-    prompt: string;
-  };
+  prompt?: string;
   profileImage: string;
+  price: number;
+  price_photo: number;
   postCount?: number;
   storyCount?: number;
+}
+
+export interface ModelPhoto {
+  id: string;
+  modelId: string;
+  image: string;
+  isPrivate: boolean;
+  createdAt: Date;
 }
 
 export interface Post {
@@ -72,9 +79,22 @@ export interface Review {
   createdAt: Date;
 }
 
+export type PhotoRequestStatus = 'new' | 'cancel' | 'closed';
+
+export interface PhotoRequest {
+  id: string;
+  chatId: string;
+  userId: string;
+  status: PhotoRequestStatus;
+  photoUrl?: string;
+  message: string;
+  createdAt: Date;
+  chat?: Chat;
+}
+
 export interface Message {
   id: string;
-  senderId: string;
+  isFromUser: boolean;
   text?: string;
   image?: string;
   timestamp: Date;

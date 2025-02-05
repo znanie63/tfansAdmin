@@ -1,10 +1,11 @@
 import { supabase } from './supabase';
-import { Model } from '@/types';
+import { Model, ModelPhoto } from '@/types';
 import { compressImage } from './utils/image';
 
 // Constants
 const MODELS_BUCKET = 'models';
 const PROFILE_IMAGES_FOLDER = 'profile-images';
+const MODEL_PHOTOS_FOLDER = 'model-photos';
 
 // Types for database records
 interface ModelRecord {
@@ -25,6 +26,24 @@ interface ModelRecord {
   updated_at: string;
 }
 
+interface ModelPhotoRecord {
+  id: string;
+  model_id: string;
+  image_path: string;
+  is_private: boolean;
+  created_at: string;
+}
+
+function transformModelPhotoFromDB(record: ModelPhotoRecord): ModelPhoto {
+  return {
+    id: record.id,
+    modelId: record.model_id,
+    image: record.image_path,
+    isPrivate: record.is_private,
+    createdAt: new Date(record.created_at),
+  };
+}
+
 // Helper function to transform database record to Model type
 function transformModelFromDB(record: ModelRecord): Model {
   return {
@@ -41,6 +60,9 @@ function transformModelFromDB(record: ModelRecord): Model {
     instagramLink: record.instagram_link || undefined,
     otherSocialLink: record.other_social_link || undefined,
     profileImage: record.profile_image_path,
+    prompt: record.prompt || undefined,
+    price: record.price || 50,
+    price_photo: record.price_photo || 50,
   };
 }
 
@@ -59,6 +81,9 @@ function transformModelToDB(model: Partial<Model>): Partial<ModelRecord> {
     ...(model.instagramLink !== undefined && { instagram_link: model.instagramLink || null }),
     ...(model.otherSocialLink !== undefined && { other_social_link: model.otherSocialLink || null }),
     ...(model.profileImage && { profile_image_path: model.profileImage }),
+    ...(model.prompt !== undefined && { prompt: model.prompt || null }),
+    ...(model.price !== undefined && { price: model.price }),
+    ...(model.price_photo !== undefined && { price_photo: model.price_photo }),
   };
 }
 
@@ -98,6 +123,42 @@ export async function uploadModelImage(file: File): Promise<string> {
   return publicUrl;
 }
 
+export async function uploadModelPhoto(file: File): Promise<string> {
+  if (!file) throw new Error('No file provided');
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('File must be an image');
+  }
+
+  // Compress image before upload
+  let imageToUpload: File;
+  try {
+    imageToUpload = await compressImage(file);
+  } catch (error) {
+    console.error('Image compression error:', error);
+    throw new Error('Failed to process image');
+  }
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${crypto.randomUUID()}.${fileExt}`;
+  const filePath = `${MODEL_PHOTOS_FOLDER}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(MODELS_BUCKET)
+    .upload(filePath, imageToUpload);
+
+  if (uploadError) {
+    console.error('Upload error:', uploadError);
+    throw new Error('Failed to upload image');
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from(MODELS_BUCKET)
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
+
 export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
   const dbRecord = transformModelToDB(model);
 
@@ -117,6 +178,25 @@ export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
   }
 
   return transformModelFromDB(data as ModelRecord);
+}
+
+export async function createModelPhoto(modelId: string, data: { image: string }): Promise<ModelPhoto> {
+  const { data: photo, error } = await supabase
+    .from('model_photos')
+    .insert({
+      model_id: modelId,
+      image_path: data.image,
+      is_private: false,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create error:', error);
+    throw new Error('Failed to create model photo');
+  }
+
+  return transformModelPhotoFromDB(photo as ModelPhotoRecord);
 }
 
 export async function updateModel(id: string, model: Partial<Model>): Promise<Model> {
@@ -158,6 +238,24 @@ export async function updateModel(id: string, model: Partial<Model>): Promise<Mo
   return transformModelFromDB(data as ModelRecord);
 }
 
+export async function updateModelPhoto(id: string, data: { isPrivate: boolean }): Promise<ModelPhoto> {
+  const { data: photo, error } = await supabase
+    .from('model_photos')
+    .update({
+      is_private: data.isPrivate,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update error:', error);
+    throw new Error('Failed to update model photo');
+  }
+
+  return transformModelPhotoFromDB(photo as ModelPhotoRecord);
+}
+
 export async function deleteModel(id: string): Promise<void> {
   const { error } = await supabase
     .from('models')
@@ -167,6 +265,18 @@ export async function deleteModel(id: string): Promise<void> {
   if (error) {
     console.error('Delete error:', error);
     throw new Error('Failed to delete model');
+  }
+}
+
+export async function deleteModelPhoto(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('model_photos')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Delete error:', error);
+    throw new Error('Failed to delete model photo');
   }
 }
 
@@ -222,4 +332,19 @@ export async function getModel(id: string): Promise<Model> {
   }
   
   return transformModelFromDB(data as ModelRecord);
+}
+
+export async function getModelPhotos(modelId: string): Promise<ModelPhoto[]> {
+  const { data, error } = await supabase
+    .from('model_photos')
+    .select('*')
+    .eq('model_id', modelId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Fetch error:', error);
+    throw new Error('Failed to fetch model photos');
+  }
+
+  return (data as ModelPhotoRecord[]).map(transformModelPhotoFromDB);
 }

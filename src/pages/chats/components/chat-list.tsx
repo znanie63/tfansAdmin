@@ -1,12 +1,10 @@
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Chat } from '@/types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface ChatListProps {
   chats: Chat[];
@@ -16,18 +14,14 @@ interface ChatListProps {
 
 export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps) {
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'photos'>('all');
 
-  const filteredChats = chats.filter(chat => (
-    // First apply tab filter
-    (activeTab === 'all' || (activeTab === 'photos' && chat.type === 'photo_request')) &&
-    // Then apply search filter
-    chat.user.username.toLowerCase().includes(search.toLowerCase()) ||
-    chat.model.firstName.toLowerCase().includes(search.toLowerCase()) ||
-    chat.model.lastName.toLowerCase().includes(search.toLowerCase())
-  ));
-
-  const photoRequestsCount = chats.filter(chat => chat.type === 'photo_request').length;
+  const filteredChats = useMemo(() => chats.filter(chat => (
+    search ? (
+      chat.user.username.toLowerCase().includes(search.toLowerCase()) ||
+      chat.model.firstName.toLowerCase().includes(search.toLowerCase()) ||
+      chat.model.lastName.toLowerCase().includes(search.toLowerCase())
+    ) : true
+  )), [chats, search]);
 
   return (
     <>
@@ -41,19 +35,6 @@ export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps)
             className="pl-9"
           />
         </div>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'photos')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="all">All Chats</TabsTrigger>
-            <TabsTrigger value="photos" className="flex items-center gap-2">
-              Photo Requests
-              {photoRequestsCount > 0 && (
-                <Badge variant="secondary" className="ml-auto">
-                  {photoRequestsCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
       
       <ScrollArea className="flex-1">

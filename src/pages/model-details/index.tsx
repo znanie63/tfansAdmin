@@ -17,11 +17,14 @@ import { ModelForm } from '@/components/models/model-form';
 import { ModelProfile } from '@/components/models/model-profile';
 import { ModelPosts } from '@/components/models/model-posts';
 import { ModelStories } from '@/components/models/model-stories';
+import { ModelPhotos } from '@/components/models/model-photos';
+import { ModelPhotoForm } from '@/components/models/model-photo-form';
 import { PostForm } from '@/components/posts/post-form';
 import { StoryForm } from '@/components/stories/story-form';
-import { Model, Post, Story } from '@/types';
+import { Model, Post, Story, ModelPhoto } from '@/types';
 import { getModelPosts, createPost, deletePost, uploadPostImage } from '@/lib/posts';
 import { getModelStories, createStory, deleteStory, uploadStoryImage } from '@/lib/stories';
+import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto } from '@/lib/models';
 import { toast } from 'sonner';
 import { getModel, updateModel, deleteModel } from '@/lib/models';
 
@@ -31,11 +34,15 @@ export function ModelDetails() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isCreatingStory, setIsCreatingStory] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [model, setModel] = useState<Model | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
+  const [photos, setPhotos] = useState<ModelPhoto[]>([]);
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [isSubmittingStory, setIsSubmittingStory] = useState(false);
+  const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
+  const [isCreatingPhoto, setIsCreatingPhoto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,13 +60,15 @@ export function ModelDetails() {
         setModel(modelData);
         
         // Load posts and stories
-        const [postsData, storiesData] = await Promise.all([
+        const [postsData, storiesData, photosData] = await Promise.all([
           getModelPosts(id),
-          getModelStories(id)
+          getModelStories(id),
+          getModelPhotos(id)
         ]);
         
         setPosts(postsData);
         setStories(storiesData);
+        setPhotos(photosData);
       } catch (err) {
         console.error('Error loading model:', err);
         toast.error('Failed to load model');
@@ -174,6 +183,60 @@ export function ModelDetails() {
     }
   };
 
+  const handleCreatePhoto = () => {
+    setIsCreatingPhoto(true);
+  };
+
+  const handleSubmitPhoto = async (data: { imageFiles: File[] }) => {
+    try {
+      if (!model) return;
+      setIsSubmittingPhoto(true);
+
+      // Upload all photos in parallel
+      const uploadPromises = data.imageFiles.map(async (file) => {
+        const imagePath = await uploadModelPhoto(file);
+        return createModelPhoto(model.id, { image: imagePath });
+      });
+
+      const newPhotos = await Promise.all(uploadPromises);
+
+      setPhotos(prev => [...newPhotos, ...prev]);
+      setIsCreatingPhoto(false);
+      toast.success(`${newPhotos.length} photos uploaded successfully`);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsSubmittingPhoto(false);
+    }
+  };
+
+  const handleTogglePhotoPrivate = async (photo: ModelPhoto) => {
+    try {
+      const updatedPhoto = await updateModelPhoto(photo.id, {
+        isPrivate: !photo.isPrivate
+      });
+      setPhotos(prev => prev.map(p => 
+        p.id === updatedPhoto.id ? updatedPhoto : p
+      ));
+      toast.success('Photo visibility updated');
+    } catch (error) {
+      console.error('Error updating photo:', error);
+      toast.error('Failed to update photo');
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    try {
+      await deleteModelPhoto(photoId);
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      toast.success('Photo deleted successfully');
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error('Failed to delete photo');
+    }
+  };
+
   const handleDeleteModel = async () => {
     try {
       if (!model?.id) return;
@@ -240,6 +303,12 @@ export function ModelDetails() {
                     <span className="font-medium">Stories</span>
                   </div>
                 </TabsTrigger>
+                <TabsTrigger value="photos" className="flex-1 h-10 sm:h-12">
+                  <div className="flex items-center justify-center gap-1 sm:gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    <span className="font-medium">Photos</span>
+                  </div>
+                </TabsTrigger>
               </TabsList>
               <div className="absolute inset-x-0 -bottom-4 h-4 bg-gradient-to-b from-background/95 to-transparent" />
             </div>
@@ -255,6 +324,14 @@ export function ModelDetails() {
                 stories={stories}
                 onCreateStory={() => setIsCreatingStory(true)}
                 onDeleteStory={handleDeleteStory}
+              />
+            </TabsContent>
+            <TabsContent value="photos" className="w-full min-h-[400px]">
+              <ModelPhotos
+                photos={photos}
+                onCreatePhoto={handleCreatePhoto}
+                onTogglePrivate={handleTogglePhotoPrivate}
+                onDeletePhoto={handleDeletePhoto}
               />
             </TabsContent>
           </Tabs>
@@ -295,6 +372,19 @@ export function ModelDetails() {
             isSubmitting={isSubmittingStory}
             onSubmit={handleSubmitStory}
             onCancel={() => setIsCreatingStory(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreatingPhoto} onOpenChange={setIsCreatingPhoto}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Photo</DialogTitle>
+          </DialogHeader>
+          <ModelPhotoForm
+            isSubmitting={isSubmittingPhoto}
+            onSubmit={handleSubmitPhoto}
+            onCancel={() => setIsCreatingPhoto(false)}
           />
         </DialogContent>
       </Dialog>

@@ -84,7 +84,7 @@ export function Users() {
   };
 
   const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(search.toLowerCase())
+    user.username?.toLowerCase().includes(search?.toLowerCase() || '') ?? false
   );
 
   const renderEmptyState = () => (

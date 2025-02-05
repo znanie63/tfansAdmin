@@ -1,21 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { Image, Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
-import { Chat, Message } from '@/types';
+import { Chat } from '@/types';
 import { cn } from '@/lib/utils';
+import { sendMessage, uploadChatImage } from '@/lib/chats';
+import { toast } from 'sonner';
 
 interface ChatViewProps {
   chat: Chat;
   onBack?: () => void;
+  onMessageSent: () => void;
 }
 
-export function ChatView({ chat, onBack }: ChatViewProps) {
+export function ChatView({ chat, onBack, onMessageSent }: ChatViewProps) {
   const [message, setMessage] = useState('');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -26,27 +27,29 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
     scrollToBottom();
   }, [chat.messages]);
 
-  const handleSendMessage = () => {
-    if (!message.trim() && !selectedImage) return;
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
     
-    // Here we'll add the logic to send messages once we integrate with the database
-    console.log('Sending message:', { text: message, image: selectedImage });
-    
+    try {
+      await sendMessage(chat.id, {
+        content: message.trim(),
+        messageType: 'text',
+        isFromUser: true,
+        isAdmin: true
+      });
+
+      onMessageSent();
+    } catch (error) {
+      toast.error('Failed to send message');
+    }
+
     setMessage('');
-    setSelectedImage(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
     }
   };
 
@@ -85,10 +88,10 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
               key={message.id}
               className={cn(
                 "flex gap-3",
-                message.senderId === chat.model.id && "justify-end"
+                !message.isFromUser && "justify-end"
               )}
             >
-              {message.senderId !== chat.model.id && (
+              {message.isFromUser && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={chat.user.avatar} />
                 </Avatar>
@@ -96,7 +99,7 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
               
               <div className={cn(
                 "rounded-lg p-3 max-w-[70%]",
-                message.senderId === chat.model.id
+                !message.isFromUser
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted"
               )}>
@@ -113,7 +116,7 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
                 </span>
               </div>
 
-              {message.senderId === chat.model.id && (
+              {!message.isFromUser && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={chat.model.profileImage} />
                 </Avatar>
@@ -126,39 +129,7 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
 
       {/* Message Input */}
       <div className="p-3 sm:p-4 border-t">
-        {selectedImage && (
-          <div className="mb-2 p-2 bg-muted rounded-lg flex items-center gap-2">
-            <Image className="h-4 w-4" />
-            <span className="text-sm truncate">{selectedImage.name}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto"
-              onClick={() => setSelectedImage(null)}
-            >
-              Remove
-            </Button>
-          </div>
-        )}
-        
         <div className="flex gap-2">
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-          />
-          
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="h-9 w-9 shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Image className="h-4 w-4" />
-          </Button>
-          
           <Input
             placeholder="Type a message..."
             value={message}

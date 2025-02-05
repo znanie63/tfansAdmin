@@ -7,7 +7,8 @@ import {
   Link,
   Instagram,
   Pencil,
-  Trash2,
+  Trash2, 
+  Coins
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -97,21 +98,16 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
           )}
         </div>
         <Separator />
-        {model.personality && (
+        {model.prompt && (
           <>
             <div className="space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground mb-2">Personality</h3>
-              <InfoItem
-                icon={MessageSquare}
-                label="Communication Style"
-                value={model.personality.communicationStyle}
-              />
               <div className="flex items-start gap-2 text-sm">
                 <CircleDotIcon className="h-4 w-4 text-muted-foreground mt-1" />
                 <div className="flex-1 min-w-0">
                   <span className="block text-muted-foreground mb-1.5">Personality Prompt</span>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {model.personality.prompt}
+                    {model.prompt}
                   </p>
                 </div>
               </div>
@@ -134,6 +130,20 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
               icon={Link} label="Other Social" value={model.otherSocialLink}
             />
           )}
+        </div>
+        <Separator />
+        <div className="space-y-4">
+          <h3 className="font-medium text-sm text-muted-foreground mb-2">Pricing</h3>
+          <InfoItem
+            icon={Coins}
+            label="Message Price"
+            value={`${model.price} TFC / 1000 tokens`}
+          />
+          <InfoItem
+            icon={Coins}
+            label="Photo Price"
+            value={`${model.price_photo} TFC / photo`}
+          />
         </div>
         <Separator />
         <div className="flex flex-col gap-2">

@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   UserCircle,
   Target,
-  MessageSquare,
+  MessageSquare, Image
 } from 'lucide-react';
 
 export const menuItems = [
@@ -32,6 +32,11 @@ export const menuItems = [
     title: 'Reviews',
     icon: MessageSquare,
     href: '/reviews'
+  },
+  {
+    title: 'Photo Requests',
+    icon: Image,
+    href: '/photo-requests'
   },
   {
     title: 'Users',

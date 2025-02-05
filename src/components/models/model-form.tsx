@@ -25,14 +25,9 @@ const formSchema = z.object({
   quote: z.string().min(10, 'Quote must be at least 10 characters'),
   height: z.number().min(140).max(220),
   weight: z.number().min(40).max(150),
-  personality: z.object({
-    communicationStyle: z.string()
-      .min(1, 'Communication style is required')
-      .max(50, 'Communication style must be at most 50 characters'),
-    prompt: z.string()
-      .min(10, 'Prompt must be at least 10 characters')
-      .max(250, 'Prompt must be at most 250 characters')
-  }),
+  prompt: z.string()
+    .min(10, 'Prompt must be at least 10 characters')
+    .max(250, 'Prompt must be at most 250 characters'),
   languages: z.string().min(2, 'Please enter at least one language'),
   characteristics: z.array(z.object({
     key: z.string().min(1, 'Characteristic name is required'),
@@ -41,6 +36,8 @@ const formSchema = z.object({
   chatLink: z.string().url('Please enter a valid URL'),
   instagramLink: z.string().url('Please enter a valid URL').optional(),
   otherSocialLink: z.string().url('Please enter a valid URL').optional(),
+  price: z.number().min(1, 'Price must be at least 1 TFC'),
+  price_photo: z.number().min(1, 'Photo price must be at least 1 TFC'),
 });
 
 interface ModelFormProps {
@@ -69,15 +66,14 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       quote: initialData?.quote || '',
       height: initialData?.height || 170,
       weight: initialData?.weight || 60,
+      prompt: initialData?.prompt || '',
       languages: initialData?.languages?.join(', ') || '',
-      personality: {
-        communicationStyle: initialData?.personality?.communicationStyle || '',
-        prompt: initialData?.personality?.prompt || ''
-      },
       characteristics: characteristics,
       chatLink: initialData?.chatLink || '',
       instagramLink: initialData?.instagramLink || '',
       otherSocialLink: initialData?.otherSocialLink || '',
+      price: initialData?.price || 50,
+      price_photo: initialData?.price_photo || 50,
     },
   });
 
@@ -297,28 +293,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
             
             <FormField
               control={form.control}
-              name="personality.communicationStyle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Communication Style</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field}
-                      maxLength={50}
-                      placeholder="e.g., Friendly and casual, Professional and formal"
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {field.value?.length || 0}/50 characters
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="personality.prompt"
+              name="prompt"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Personality Prompt</FormLabel>
@@ -445,6 +420,55 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
               </FormItem>
             )}
           />
+        </div>
+
+
+        <div className="space-y-6 border-t pt-6">
+          <h3 className="text-lg font-semibold">Pricing Settings</h3>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Message Price (TFC)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      onChange={e => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Cost per 1000 tokens
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="price_photo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Photo Price (TFC)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      onChange={e => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Cost per photo request
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <div className="p-6 border-t">

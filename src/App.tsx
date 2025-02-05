@@ -14,6 +14,7 @@ import { Chats } from '@/pages/chats';
 import { Reviews } from '@/pages/reviews';
 import { Stories } from '@/pages/stories';
 import { Users } from '@/pages/users';
+import { PhotoRequests } from '@/pages/photo-requests';
 
 function App() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
                 <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                <Route path="/photo-requests" element={<ProtectedRoute><PhotoRequests /></ProtectedRoute>} />
               </Routes>
             </main>
           </div>
