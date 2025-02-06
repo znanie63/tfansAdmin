@@ -1,6 +1,12 @@
 import { supabase } from './supabase';
 import { startOfDay, startOfWeek, subDays, format, subWeeks } from 'date-fns';
 
+interface UserStats {
+  totalUsers: number;
+  totalBalance: number;
+  totalSpent: number;
+}
+
 export interface StatChange {
   current: number;
   previous: number;
@@ -15,6 +21,38 @@ export interface DashboardStats {
   totalUsers: StatChange;
 }
 
+export async function getUserStats(): Promise<UserStats> {
+  try {
+    // Get users count
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+
+    // Get all balance transactions
+    const { data: transactions } = await supabase
+      .from('balance')
+      .select('amount, type');
+
+    // Calculate total balance and spent
+    const totalBalance = transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
+    const totalSpent = transactions
+      ?.filter(tx => tx.type === 'token_deduction')
+      ?.reduce((sum, tx) => sum + Math.abs(tx.amount), 0) || 0;
+
+    return {
+      totalUsers: totalUsers || 0,
+      totalBalance,
+      totalSpent
+    };
+  } catch (error) {
+    console.error('Error getting user stats:', error);
+    return {
+      totalUsers: 0,
+      totalBalance: 0,
+      totalSpent: 0
+    };
+  }
+}
 export interface TaskCompletionStats {
   taskName: string;
   taskType: string;

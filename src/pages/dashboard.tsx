@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getDashboardStats, DashboardStats } from '@/lib/stats';
+import { getDashboardStats, DashboardStats, getUserStats } from '@/lib/stats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,18 +7,25 @@ import {
   UserCircle,
   Target,
   Star,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Coins,
+  TrendingDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Dashboard() {
   const [timeframe] = useState<'today' | 'week'>('today');
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    totalBalance: 0,
+    totalSpent: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadStats();
+    Promise.all([loadStats(), loadUserStats()]);
   }, []);
 
   const loadStats = async () => {
@@ -32,6 +39,15 @@ export function Dashboard() {
       setError('Failed to load dashboard statistics');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserStats = async () => {
+    try {
+      const data = await getUserStats();
+      setUserStats(data);
+    } catch (error) {
+      console.error('Error loading user stats:', error);
     }
   };
 
@@ -110,6 +126,53 @@ export function Dashboard() {
           </Button>
         </div>
       </div>
+
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Users</p>
+                <p className="text-lg font-bold mt-0.5">{userStats.totalUsers}</p>
+              </div>
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                <UsersIcon className="h-3.5 w-3.5 mr-1.5" />
+                Users
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Balance</p>
+                <p className="text-lg font-bold mt-0.5">{userStats.totalBalance} TFC</p>
+              </div>
+              <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                <Coins className="h-3.5 w-3.5 mr-1.5" />
+                Balance
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Spent</p>
+                <p className="text-lg font-bold mt-0.5">{userStats.totalSpent} TFC</p>
+              </div>
+              <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">
+                <TrendingDown className="h-3.5 w-3.5 mr-1.5" />
+                Spent
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="h-px bg-border my-8" />
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (

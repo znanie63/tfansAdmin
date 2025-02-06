@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Users as UsersIcon, Search, Plus } from 'lucide-react';
+import { Users as UsersIcon, Search, Plus, Coins, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { getUsers } from '@/lib/users';
 import { Input } from '@/components/ui/input';
 import { columns } from '@/components/users/columns';
@@ -25,6 +27,11 @@ export function Users() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalBalance: 0,
+    totalSpent: 0
+  });
 
   useEffect(() => {
     loadData();
@@ -37,6 +44,13 @@ export function Users() {
         getUsers(),
         getAdmins()
       ]);
+      
+      // Calculate stats
+      const totalUsers = usersData.length;
+      const totalBalance = usersData.reduce((sum, user) => sum + user.balance, 0);
+      const totalSpent = usersData.reduce((sum, user) => sum + user.totalSpent, 0);
+      
+      setStats({ totalUsers, totalBalance, totalSpent });
       setUsers(usersData);
       setAdmins(adminsData);
     } catch (error) {
@@ -117,6 +131,51 @@ export function Users() {
             Manage user accounts and balances
           </p>
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Users</p>
+                <p className="text-lg font-bold mt-0.5">{stats.totalUsers}</p>
+              </div>
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                <UsersIcon className="h-3.5 w-3.5 mr-1.5" />
+                Users
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Balance</p>
+                <p className="text-lg font-bold mt-0.5">{stats.totalBalance} TFC</p>
+              </div>
+              <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                <Coins className="h-3.5 w-3.5 mr-1.5" />
+                Balance
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Spent</p>
+                <p className="text-lg font-bold mt-0.5">{stats.totalSpent} TFC</p>
+              </div>
+              <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">
+                <TrendingDown className="h-3.5 w-3.5 mr-1.5" />
+                Spent
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="users" className="w-full">

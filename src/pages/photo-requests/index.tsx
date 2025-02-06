@@ -49,6 +49,7 @@ export function PhotoRequests() {
   const [modelPhotos, setModelPhotos] = useState<ModelPhoto[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [userBalances, setUserBalances] = useState<Record<string, number>>({});
 
   // Sort requests by status and date
   const sortedRequests = useMemo(() => {
@@ -67,6 +68,38 @@ export function PhotoRequests() {
     loadRequests();
     loadStats();
   }, []);
+
+  useEffect(() => {
+    if (requests.length > 0) {
+      loadUserBalances();
+    }
+  }, [requests]);
+
+  const loadUserBalances = async () => {
+    try {
+      const { data: balances, error } = await supabase
+        .from('balance')
+        .select('user_id, amount')
+        .in('user_id', requests.map(req => req.userId))
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading user balances:', error);
+        return;
+      }
+
+      // Группируем транзакции по пользователю и суммируем
+      const balanceMap = balances.reduce((acc, { user_id, amount }) => {
+        acc[user_id] = (acc[user_id] || 0) + amount;
+        return acc;
+      }, {} as Record<string, number>);
+
+      console.log('User balances:', balanceMap); // Для отладки
+      setUserBalances(balanceMap);
+    } catch (error) {
+      console.error('Error loading user balances:', error);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -103,7 +136,22 @@ export function PhotoRequests() {
   const loadRequests = async () => {
     try {
       setLoading(true);
-      const data = await getPhotoRequests();
+      // Get photo requests
+      let data = await getPhotoRequests();
+      
+      // Get photo prices for each model
+      const modelIds = data.map(req => req.chat?.model.id).filter(Boolean);
+      const { data: modelPrices } = await supabase
+        .from('models')
+        .select('id, price_photo')
+        .in('id', modelIds);
+
+      // Add photo prices to requests
+      data = data.map(req => ({
+        ...req,
+        modelPhotoPrice: modelPrices?.find(m => m.id === req.chat?.model.id)?.price_photo || 0
+      }));
+
       setRequests(data);
     } catch (error) {
       console.error('Error loading photo requests:', error);
@@ -144,22 +192,45 @@ export function PhotoRequests() {
   const handleSendPhoto = async (photo: ModelPhoto) => {
     if (!selectedRequest?.chat || !selectedRequest.userId) return;
 
+    try {
+      // Get all user's balance transactions
+      const { data: transactions, error: balanceError } = await supabase
+        .from('balance')
+        .select('amount')
+        .eq('user_id', selectedRequest.userId);
+
+      if (balanceError) {
+        console.error('Error checking balance:', balanceError);
+        toast.error('Failed to check user balance');
+        return;
+      }
+
+      // Calculate total balance from all transactions
+      const currentBalance = transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
+
+      // Get photo price from model
+      const { data: model, error: modelError } = await supabase
+        .from('models')
+        .select('price_photo')
+        .eq('id', selectedRequest.chat.model.id)
+        .single();
+
+      if (modelError || !model) {
+        console.error('Error getting photo price:', modelError);
+        toast.error('Failed to get photo price');
+        return;
+      }
+
+      // Check if user has enough balance
+      if (currentBalance < model.price_photo) {
+        toast.error(`Insufficient balance. Required: ${model.price_photo} TFC, Available: ${currentBalance} TFC`);
+        return;
+      }
+
     setShowPhotosDialog(false);
 
-    const { data: model } = await supabase
-      .from('models')
-      .select('price_photo')
-      .eq('id', selectedRequest.chat.model.id)
-      .single();
-
-    if (!model) {
-      toast.error('Failed to get photo price');
-      return;
-    }
-
-    try {
       // Create balance record for token deduction
-      const { error: balanceError } = await supabase
+      const { error: deductionError } = await supabase
         .from('balance')
         .insert({
           user_id: selectedRequest.userId,
@@ -168,8 +239,8 @@ export function PhotoRequests() {
           description: 'Списание за отправку фото'
         });
 
-      if (balanceError) {
-        console.error('Balance deduction error:', balanceError);
+      if (deductionError) {
+        console.error('Balance deduction error:', deductionError);
         toast.error('Failed to process token deduction');
         return;
       }
@@ -186,11 +257,11 @@ export function PhotoRequests() {
 
       // Update request status to closed
       await updatePhotoRequestStatus(selectedRequest.id, 'closed');
-      
+
       // Reload data
       await loadStats();
       await loadRequests();
-      
+
       setShowPhotosDialog(false);
       setSelectedModelId(null);
       toast.success('Photo sent successfully');
@@ -325,10 +396,13 @@ export function PhotoRequests() {
                       <p className="text-xs text-primary mt-0.5">
                         {request.chat.model.firstName} {request.chat.model.lastName}
                       </p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between mt-1">
                         <p className="text-xs text-muted-foreground">
                           {new Date(request.createdAt).toLocaleDateString()}
                         </p>
+                        <Badge variant="outline" className="text-xs">
+                          Balance: {userBalances[request.userId] || 0} TFC
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -341,16 +415,30 @@ export function PhotoRequests() {
                 {request.chat && request.status !== 'closed' ? (
                   <div className="flex gap-2">
                     <Button
+                      disabled={
+                        (userBalances[request.userId] || 0) < 
+                        (request.modelPhotoPrice || 0)
+                      }
                       variant="outline"
                       type="button"
-                      className="w-full h-8 text-sm hover:bg-primary/5"
+                      className={cn(
+                        "w-full h-8 text-sm",
+                        "hover:bg-primary/5",
+                        (userBalances[request.userId] || 0) < 
+                        (request.modelPhotoPrice || 0) &&
+                        "cursor-not-allowed opacity-50"
+                      )}
                       onClick={() => {
                         setSelectedRequest(request);
                         handleViewPhotos(request.chat.model.id);
                       }}
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload Photo
+                      {(userBalances[request.userId] || 0) < 
+                       (request.modelPhotoPrice || 0)
+                        ? `Insufficient balance (${request.modelPhotoPrice} TFC required)`
+                        : 'Upload Photo'
+                      }
                     </Button>
                   </div>
                 ) : request.status === 'closed' && (
@@ -387,7 +475,7 @@ export function PhotoRequests() {
             <DialogTitle>Select Photo to Send</DialogTitle>
             <DialogDescription>
               Choose a photo from the model's gallery to send as a response.
-              The user will be charged {selectedRequest?.chat?.model.price_photo} TFC for this photo.
+              The user will be charged {selectedRequest?.modelPhotoPrice} TFC for this photo.
             </DialogDescription>
           </DialogHeader>
 
