@@ -26,8 +26,7 @@ const formSchema = z.object({
   height: z.number().min(140).max(220),
   weight: z.number().min(40).max(150),
   prompt: z.string()
-    .min(10, 'Prompt must be at least 10 characters')
-    .max(250, 'Prompt must be at most 250 characters'),
+    .min(10, 'Prompt must be at least 10 characters'),
   languages: z.string().min(2, 'Please enter at least one language'),
   characteristics: z.array(z.object({
     key: z.string().min(1, 'Characteristic name is required'),
@@ -300,14 +299,10 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
                   <FormControl>
                     <Textarea 
                       {...field}
-                      maxLength={250}
                       className="min-h-[150px] resize-none"
                       placeholder="Write a detailed prompt describing the model's personality, communication style, and how they should interact with users..."
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {field.value?.length || 0}/250 characters
-                  </p>
                   <FormMessage />
                 </FormItem>
               )}
