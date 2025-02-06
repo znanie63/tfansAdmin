@@ -1,4 +1,7 @@
 import { Model } from '@/types';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+
 import {
   Languages,
   Ruler,
@@ -8,7 +11,9 @@ import {
   Instagram,
   Pencil,
   Trash2, 
-  Coins
+  Coins,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -49,6 +54,10 @@ function InfoItem({ icon: Icon, label, value }: InfoItemProps) {
 }
 
 export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
+  const [showFullPrompt, setShowFullPrompt] = useState(false);
+  const PROMPT_MAX_LENGTH = 250;
+  const shouldShowButton = model.prompt && model.prompt.length > PROMPT_MAX_LENGTH;
+
   return (
     <Card className="overflow-hidden">
       <div className="relative h-[240px] w-full">
@@ -105,10 +114,38 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
               <div className="flex items-start gap-2 text-sm">
                 <CircleDotIcon className="h-4 w-4 text-muted-foreground mt-1" />
                 <div className="flex-1 min-w-0">
-                  <span className="block text-muted-foreground mb-1.5">Personality Prompt</span>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {model.prompt}
-                  </p>
+                  <div className="space-y-2">
+                    <span className="block text-muted-foreground">Personality Prompt</span>
+                    <p className={cn(
+                      "text-sm leading-relaxed whitespace-pre-wrap transition-all",
+                      !showFullPrompt && shouldShowButton && "line-clamp-3"
+                    )}>
+                      {model.prompt}
+                    </p>
+                    {shouldShowButton && (
+                      <div className="mt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full h-8 hover:bg-secondary/80"
+                          onClick={() => setShowFullPrompt(!showFullPrompt)}
+                        >
+                          {showFullPrompt ? (
+                            <>
+                              <ChevronUp className="h-4 w-4 mr-2" />
+                              Show Less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-4 w-4 mr-2" />
+                              Show More
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

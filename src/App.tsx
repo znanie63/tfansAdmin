@@ -11,6 +11,7 @@ import { ModelDetails } from '@/pages/model-details';
 import { Posts } from '@/pages/posts';
 import { Tasks } from '@/pages/tasks';
 import { Chats } from '@/pages/chats';
+import { Settings } from '@/pages/settings';
 import { Reviews } from '@/pages/reviews';
 import { Stories } from '@/pages/stories';
 import { Users } from '@/pages/users';
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
                 <Route path="/photo-requests" element={<ProtectedRoute><PhotoRequests /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               </Routes>
             </main>
           </div>
