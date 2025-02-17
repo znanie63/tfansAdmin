@@ -1,22 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft } from 'lucide-react';
+import { useRef, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Chat } from '@/types';
 import { cn } from '@/lib/utils';
-import { sendMessage, uploadChatImage } from '@/lib/chats';
-import { toast } from 'sonner';
 
 interface ChatViewProps {
   chat: Chat;
+  loading?: boolean;
   onBack?: () => void;
   onMessageSent: () => void;
 }
 
-export function ChatView({ chat, onBack, onMessageSent }: ChatViewProps) {
-  const [message, setMessage] = useState('');
+export function ChatView({ chat, loading = false, onBack, onMessageSent }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -26,32 +23,6 @@ export function ChatView({ chat, onBack, onMessageSent }: ChatViewProps) {
   useEffect(() => {
     scrollToBottom();
   }, [chat.messages]);
-
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
-    
-    try {
-      await sendMessage(chat.id, {
-        content: message.trim(),
-        messageType: 'text',
-        isFromUser: true,
-        isAdmin: true
-      });
-
-      onMessageSent();
-    } catch (error) {
-      toast.error('Failed to send message');
-    }
-
-    setMessage('');
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -82,6 +53,11 @@ export function ChatView({ chat, onBack, onMessageSent }: ChatViewProps) {
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
         <div className="space-y-4">
           {chat.messages.map((message, index) => (
             <div
@@ -125,28 +101,8 @@ export function ChatView({ chat, onBack, onMessageSent }: ChatViewProps) {
           ))}
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
-
-      {/* Message Input */}
-      <div className="p-3 sm:p-4 border-t">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Type a message..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyPress}
-            className="flex-1"
-          />
-          
-          <Button 
-            onClick={handleSendMessage}
-            size="icon-sm"
-            className="h-9 w-9 shrink-0"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+        )}
+      </ScrollArea> 
     </div>
   );
 }

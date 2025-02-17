@@ -106,10 +106,6 @@ export function Login() {
             </Button>
           </form>
         </Form>
-
-        <div className="text-center text-sm text-muted-foreground">
-          Demo credentials: admin@tfc.com / admin
-        </div>
       </div>
     </div>
   );

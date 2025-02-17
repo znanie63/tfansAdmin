@@ -2,18 +2,23 @@ import { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { ChatList } from './components/chat-list';
 import { ChatView } from './components/chat-view';
-import { getChats, sendMessage, uploadChatImage } from '@/lib/chats';
-import { Chat } from '@/types';
+import { getChats, getChatMessages, sendMessage, uploadChatImage } from '@/lib/chats';
+import { Chat, Message } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function Chats() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<Omit<Chat, 'messages'>[]>([]);
+  const [selectedChatMessages, setSelectedChatMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   
-  const selectedChat = chats.find(chat => chat.id === selectedChatId);
+  const selectedChat = selectedChatId ? {
+    ...chats.find(chat => chat.id === selectedChatId)!,
+    messages: selectedChatMessages
+  } : null;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -29,6 +34,12 @@ export function Chats() {
     loadChats();
   }, []);
 
+  useEffect(() => {
+    if (selectedChatId) {
+      loadChatMessages(selectedChatId);
+    }
+  }, [selectedChatId]);
+
   const loadChats = async () => {
     try {
       setLoading(true);
@@ -42,8 +53,31 @@ export function Chats() {
     }
   };
 
+  const loadChatMessages = async (chatId: string) => {
+    try {
+      setLoadingMessages(true);
+      const messages = await getChatMessages(chatId);
+      setSelectedChatMessages(messages);
+
+      // Update last message in chats list
+      if (messages.length > 0) {
+        setChats(prev => prev.map(chat => 
+          chat.id === chatId 
+            ? { ...chat, lastMessage: messages[0].text || 'Photo' }
+            : chat
+        ));
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast.error('Failed to load messages');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   const handleBackToList = () => {
     setSelectedChatId(null);
+    setSelectedChatMessages([]);
   };
 
   if (loading) {
@@ -82,6 +116,7 @@ export function Chats() {
           {selectedChat ? (
             <ChatView 
               chat={selectedChat}
+              loading={loadingMessages}
               onMessageSent={loadChats}
               onBack={isMobileView ? handleBackToList : undefined} />
           ) : (

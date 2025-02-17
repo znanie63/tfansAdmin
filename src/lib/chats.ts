@@ -3,7 +3,7 @@ import { Chat, Message } from '@/types';
 import { transformChatFromDB, transformMessageFromDB } from './transformers';
 import type { ChatRecord, MessageRecord } from './transformers';
 
-export async function getChats(): Promise<Chat[]> {
+export async function getChats(): Promise<Omit<Chat, 'messages'>[]> {
   const { data: chats, error } = await supabase
     .from('chats')
     .select(`
@@ -18,20 +18,7 @@ export async function getChats(): Promise<Chat[]> {
       users (
         username,
         photo_url
-      ),
-      messages (
-        id,
-        chat_id,
-        user_id,
-        content,
-        message_type,
-        image_url,
-        is_from_user,
-        is_admin,
-        created_at
-      ) {
-        order: created_at
-      }
+      )
     `)
     .order('updated_at', { ascending: false });
 
@@ -40,7 +27,26 @@ export async function getChats(): Promise<Chat[]> {
     throw new Error('Failed to fetch chats');
   }
 
-  return (chats as ChatRecord[]).map(transformChatFromDB);
+  return (chats as ChatRecord[]).map(chat => ({
+    id: chat.id,
+    type: 'regular',
+    user: {
+      id: chat.user_id,
+      username: chat.users.username,
+      avatar: chat.users.photo_url,
+      joinedAt: new Date(),
+    },
+    model: {
+      id: chat.model_id,
+      firstName: chat.models.first_name,
+      lastName: chat.models.last_name,
+      nickname: chat.models.nickname,
+      profileImage: chat.models.profile_image_path,
+      chatLink: chat.models.chat_link,
+    },
+    lastMessage: '',
+    lastMessageAt: new Date(chat.updated_at),
+  }));
 }
 
 export async function getChatMessages(chatId: string): Promise<Message[]> {
@@ -48,14 +54,17 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
     .from('messages')
     .select('*')
     .eq('chat_id', chatId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(50);
 
   if (error) {
     console.error('Error fetching messages:', error);
     throw new Error('Failed to fetch messages');
   }
 
-  return (messages as MessageRecord[]).map(transformMessageFromDB);
+  return (messages as MessageRecord[])
+    .map(transformMessageFromDB)
+    .reverse();
 }
 
 export async function sendMessage(chatId: string, data: { 
