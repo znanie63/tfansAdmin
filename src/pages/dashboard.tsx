@@ -14,7 +14,6 @@ import {
 import { cn } from '@/lib/utils';
 
 export function Dashboard() {
-  const [timeframe] = useState<'today' | 'week'>('today');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [userStats, setUserStats] = useState({
     totalUsers: 0,
@@ -117,14 +116,6 @@ export function Dashboard() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <Button variant={timeframe === 'today' ? 'default' : 'outline'} size="sm">
-            Today
-          </Button>
-          <Button variant={timeframe === 'week' ? 'default' : 'outline'} size="sm">
-            This Week
-          </Button>
-        </div>
       </div>
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

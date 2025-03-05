@@ -7,6 +7,7 @@ interface PhotoRequestRecord {
   chat_id: string;
   user_id: string;
   status: string;
+  chance: number;
   photo_url: string | null;
   message: string;
   created_at: string;
@@ -18,19 +19,19 @@ function transformPhotoRequestFromDB(record: PhotoRequestRecord): PhotoRequest {
     chatId: record.chat_id,
     userId: record.user_id,
     status: record.status as PhotoRequestStatus,
+    chance: record.chance,
     photoUrl: record.photo_url || undefined,
     message: record.message,
     createdAt: new Date(record.created_at),
   };
 }
 
-export async function getPhotoRequests(): Promise<PhotoRequest[]> {
+export async function getPhotoRequests(includeCompleted: boolean = false): Promise<PhotoRequest[]> {
   const { data, error } = await supabase
     .from('photo_requests')
     .select(`
       *,
       chat:chats (
-        *,
         models (
           first_name,
           last_name,
@@ -41,20 +42,10 @@ export async function getPhotoRequests(): Promise<PhotoRequest[]> {
         users (
           username,
           photo_url
-        ),
-        messages (
-          id,
-          chat_id,
-          user_id,
-          content,
-          message_type,
-          image_url,
-          is_from_user,
-          is_admin,
-          created_at
         )
       )
     `)
+    .not('status', 'eq', includeCompleted ? null : 'closed')
     .order('created_at', { ascending: false });
 
   if (error) {

@@ -5,7 +5,8 @@ import {
   Target,
   MessageSquare,
   Image,
-  Settings
+  Settings,
+  Star
 } from 'lucide-react';
 
 export const menuItems = [
@@ -32,7 +33,7 @@ export const menuItems = [
   },
   {
     title: 'Reviews',
-    icon: MessageSquare,
+    icon: Star,
     href: '/reviews'
   },
   {

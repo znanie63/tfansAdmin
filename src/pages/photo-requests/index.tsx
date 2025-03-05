@@ -1,35 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Image, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getPhotoRequests, updatePhotoRequestStatus } from '@/lib/photo-requests';
-import { sendMessage } from '@/lib/chats';
-import { getModelPhotos } from '@/lib/models';
-import { PhotoRequest, PhotoRequestStatus, ModelPhoto } from '@/types';
+import { PhotoRequest, PhotoRequestStatus } from '@/types';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { PhotoGallery } from '@/components/photos/photo-gallery';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Header } from './components/header';
+import { Stats } from './components/stats';
+import { StatusFilter } from './components/status-filter';
+import { RequestList } from './components/request-list';
 
 interface RequestStats {
-  new: number;
+  found: number;
+  not_found: number;
   cancel: number;
   closed: number;
   totalSpent: number;
@@ -38,72 +19,38 @@ interface RequestStats {
 export function PhotoRequests() {
   const [requests, setRequests] = useState<PhotoRequest[]>([]);
   const [stats, setStats] = useState<RequestStats>({
-    new: 0,
+    found: 0,
+    not_found: 0,
     cancel: 0,
-    closed: 0,
+    completed: 0,
     totalSpent: 0
   });
   const [loading, setLoading] = useState(true);
-  const [selectedRequest, setSelectedRequest] = useState<PhotoRequest | null>(null);
-  const [showPhotosDialog, setShowPhotosDialog] = useState(false);
-  const [modelPhotos, setModelPhotos] = useState<ModelPhoto[]>([]);
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [userBalances, setUserBalances] = useState<Record<string, number>>({});
+  const [selectedStatus, setSelectedStatus] = useState<PhotoRequestStatus | 'all'>('all');
 
-  // Sort requests by status and date
   const sortedRequests = useMemo(() => {
-    return [...requests].sort((a, b) => {
+    const filtered = selectedStatus === 'all' 
+      ? requests 
+      : requests.filter(request => request.status === selectedStatus);
+
+    return filtered.sort((a, b) => {
       // First sort by status priority
-      const statusPriority = { new: 0, cancel: 1, closed: 2 };
+      const statusPriority = { found: 0, not_found: 1, cancel: 2, completed: 3 };
       const statusDiff = statusPriority[a.status] - statusPriority[b.status];
       if (statusDiff !== 0) return statusDiff;
       
       // Then sort by date (newest first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [requests]);
+  }, [requests, selectedStatus]);
 
   useEffect(() => {
     loadRequests();
     loadStats();
   }, []);
 
-  useEffect(() => {
-    if (requests.length > 0) {
-      loadUserBalances();
-    }
-  }, [requests]);
-
-  const loadUserBalances = async () => {
-    try {
-      const { data: balances, error } = await supabase
-        .from('balance')
-        .select('user_id, amount')
-        .in('user_id', requests.map(req => req.userId))
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading user balances:', error);
-        return;
-      }
-
-      // Группируем транзакции по пользователю и суммируем
-      const balanceMap = balances.reduce((acc, { user_id, amount }) => {
-        acc[user_id] = (acc[user_id] || 0) + amount;
-        return acc;
-      }, {} as Record<string, number>);
-
-      console.log('User balances:', balanceMap); // Для отладки
-      setUserBalances(balanceMap);
-    } catch (error) {
-      console.error('Error loading user balances:', error);
-    }
-  };
-
   const loadStats = async () => {
     try {
-      // Get request counts by status
       const { data: requests } = await supabase
         .from('photo_requests')
         .select('status');
@@ -113,7 +60,6 @@ export function PhotoRequests() {
         return acc;
       }, {} as Record<string, number>);
 
-      // Get total tokens spent
       const { data: balanceData } = await supabase
         .from('balance')
         .select('amount')
@@ -123,7 +69,8 @@ export function PhotoRequests() {
       const totalSpent = balanceData?.reduce((sum, record) => sum + Math.abs(record.amount), 0) || 0;
 
       setStats({
-        new: counts.new || 0,
+        found: counts.found || 0,
+        not_found: counts.not_found || 0,
         cancel: counts.cancel || 0,
         closed: counts.closed || 0,
         totalSpent
@@ -136,17 +83,14 @@ export function PhotoRequests() {
   const loadRequests = async () => {
     try {
       setLoading(true);
-      // Get photo requests
-      let data = await getPhotoRequests();
+      let data = await getPhotoRequests(selectedStatus === 'closed');
       
-      // Get photo prices for each model
       const modelIds = data.map(req => req.chat?.model.id).filter(Boolean);
       const { data: modelPrices } = await supabase
         .from('models')
         .select('id, price_photo')
         .in('id', modelIds);
 
-      // Add photo prices to requests
       data = data.map(req => ({
         ...req,
         modelPhotoPrice: modelPrices?.find(m => m.id === req.chat?.model.id)?.price_photo || 0
@@ -161,124 +105,23 @@ export function PhotoRequests() {
     }
   };
 
+
   const handleStatusChange = async (requestId: string, status: PhotoRequestStatus) => {
     try {
       await updatePhotoRequestStatus(requestId, status);
-      await loadStats(); // Reload stats after status change
+      // Update stats locally
+      setStats(prev => ({
+        ...prev,
+        [status]: prev[status] + 1,
+        [requests.find(r => r.id === requestId)?.status || 'found']: prev[requests.find(r => r.id === requestId)?.status || 'found'] - 1
+      }));
+      
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, status } : req
       ));
       toast.success('Status updated successfully');
     } catch (error) {
       toast.error('Failed to update status');
-    }
-  };
-
-  const handleViewPhotos = async (modelId: string) => {
-    try {
-      setLoadingPhotos(true);
-      setSelectedModelId(modelId);
-      const photos = await getModelPhotos(modelId);
-      setModelPhotos(photos);
-      setShowPhotosDialog(true);
-    } catch (error) {
-      console.error('Error loading model photos:', error);
-      toast.error('Failed to load model photos');
-    } finally {
-      setLoadingPhotos(false);
-    }
-  };
-
-  const handleSendPhoto = async (photo: ModelPhoto) => {
-    if (!selectedRequest?.chat || !selectedRequest.userId) return;
-
-    try {
-      // Get all user's balance transactions
-      const { data: transactions, error: balanceError } = await supabase
-        .from('balance')
-        .select('amount')
-        .eq('user_id', selectedRequest.userId);
-
-      if (balanceError) {
-        console.error('Error checking balance:', balanceError);
-        toast.error('Failed to check user balance');
-        return;
-      }
-
-      // Calculate total balance from all transactions
-      const currentBalance = transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
-
-      // Get photo price from model
-      const { data: model, error: modelError } = await supabase
-        .from('models')
-        .select('price_photo')
-        .eq('id', selectedRequest.chat.model.id)
-        .single();
-
-      if (modelError || !model) {
-        console.error('Error getting photo price:', modelError);
-        toast.error('Failed to get photo price');
-        return;
-      }
-
-      // Check if user has enough balance
-      if (currentBalance < model.price_photo) {
-        toast.error(`Insufficient balance. Required: ${model.price_photo} TFC, Available: ${currentBalance} TFC`);
-        return;
-      }
-
-    setShowPhotosDialog(false);
-
-      // Create balance record for token deduction
-      const { error: deductionError } = await supabase
-        .from('balance')
-        .insert({
-          user_id: selectedRequest.userId,
-          amount: -model.price_photo,
-          type: 'token_deduction',
-          description: 'Списание за отправку фото'
-        });
-
-      if (deductionError) {
-        console.error('Balance deduction error:', deductionError);
-        toast.error('Failed to process token deduction');
-        return;
-      }
-
-      // Send message with photo
-      await sendMessage(selectedRequest.chat.id, {
-        content: 'Here is your requested photo',
-        messageType: 'image',
-        imageUrl: photo.image,
-        userId: selectedRequest.userId,
-        isFromUser: false,
-        isAdmin: true
-      });
-
-      // Update request status to closed
-      await updatePhotoRequestStatus(selectedRequest.id, 'closed');
-
-      // Reload data
-      await loadStats();
-      await loadRequests();
-
-      setShowPhotosDialog(false);
-      setSelectedModelId(null);
-      toast.success('Photo sent successfully');
-    } catch (error) {
-      console.error('Error sending photo:', error);
-      toast.error('Failed to process request');
-    }
-  };
-
-  const getStatusBadge = (status: PhotoRequestStatus) => {
-    switch (status) {
-      case 'new':
-        return <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">New</Badge>;
-      case 'cancel':
-        return <Badge variant="secondary" className="bg-red-500/10 text-red-500">Cancelled</Badge>;
-      case 'closed':
-        return <Badge variant="secondary" className="bg-green-500/10 text-green-500">Completed</Badge>;
     }
   };
 
@@ -292,200 +135,18 @@ export function PhotoRequests() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <Image className="h-8 w-8 text-primary/80" />
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Photo Requests</h1>
-          </div>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Manage and respond to user photo requests
-          </p>
-        </div>
+      <Header />
+      <Stats stats={stats} />
+      <StatusFilter
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+      />
+      <div className="pt-4">
+        <RequestList
+          requests={sortedRequests}
+          onStatusChange={handleStatusChange}
+        />
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">New</p>
-                <p className="text-lg font-bold mt-0.5">{stats.new}</p>
-              </div>
-              <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">New</Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Cancelled</p>
-                <p className="text-lg font-bold mt-0.5">{stats.cancel}</p>
-              </div>
-              <Badge variant="secondary" className="bg-red-500/10 text-red-500">Cancelled</Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Completed</p>
-                <p className="text-lg font-bold mt-0.5">{stats.closed}</p>
-              </div>
-              <Badge variant="secondary" className="bg-green-500/10 text-green-500">Completed</Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Total Spent</p>
-                <p className="text-lg font-bold mt-0.5">{stats.totalSpent} TFC</p>
-              </div>
-              <Badge variant="secondary" className="bg-primary/10 text-primary">Tokens</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="h-px bg-border" />
-
-      {requests.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedRequests.map((request) => (
-            <Card 
-              key={request.id}
-              className={cn(
-                "group transition-all duration-200 hover:shadow-md",
-                request.status === 'closed' 
-                  ? "opacity-60 hover:opacity-80" 
-                  : "hover:shadow-md"
-              )}
-            >
-              <CardHeader className="pb-2 space-y-0">
-                <div className="flex items-center justify-between">
-                  {getStatusBadge(request.status)}
-                  {request.status !== 'closed' && <Select
-                    value={request.status}
-                    onValueChange={(value) => handleStatusChange(request.id, value as PhotoRequestStatus)}
-                  >
-                    <SelectTrigger className="w-[120px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="cancel">Cancel</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-2 space-y-3">
-                {request.chat && (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={request.chat.user.avatar} />
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-none truncate">
-                        {request.chat.user.username}
-                      </p>
-                      <p className="text-xs text-primary mt-0.5">
-                        {request.chat.model.firstName} {request.chat.model.lastName}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(request.createdAt).toLocaleDateString()}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          Balance: {userBalances[request.userId] || 0} TFC
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {request.message}
-                </p>
-
-                {request.chat && request.status !== 'closed' ? (
-                  <div className="flex gap-2">
-                    <Button
-                      disabled={
-                        (userBalances[request.userId] || 0) < 
-                        (request.modelPhotoPrice || 0)
-                      }
-                      variant="outline"
-                      type="button"
-                      className={cn(
-                        "w-full h-8 text-sm",
-                        "hover:bg-primary/5",
-                        (userBalances[request.userId] || 0) < 
-                        (request.modelPhotoPrice || 0) &&
-                        "cursor-not-allowed opacity-50"
-                      )}
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        handleViewPhotos(request.chat.model.id);
-                      }}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {(userBalances[request.userId] || 0) < 
-                       (request.modelPhotoPrice || 0)
-                        ? `Insufficient balance (${request.modelPhotoPrice} TFC required)`
-                        : 'Upload Photo'
-                      }
-                    </Button>
-                  </div>
-                ) : request.status === 'closed' && (
-                  <div className="text-xs text-muted-foreground italic">
-                    Request completed
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Image className="h-12 w-12 text-muted-foreground/50" />
-          <h3 className="mt-4 text-lg font-medium">No photo requests</h3>
-          <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-            Photo requests from users will appear here.
-          </p>
-        </div>
-      )}
-
-      <Dialog 
-        open={showPhotosDialog} 
-        onOpenChange={(open) => {
-          // When closing photos dialog, don't affect chat dialog
-          setShowPhotosDialog(open);
-          if (!open) {
-            setSelectedModelId(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Select Photo to Send</DialogTitle>
-            <DialogDescription>
-              Choose a photo from the model's gallery to send as a response.
-              The user will be charged {selectedRequest?.modelPhotoPrice} TFC for this photo.
-            </DialogDescription>
-          </DialogHeader>
-
-          <PhotoGallery
-            photos={modelPhotos}
-            loading={loadingPhotos}
-            onSelectPhoto={handleSendPhoto}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

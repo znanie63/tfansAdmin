@@ -35,7 +35,7 @@ interface MessageRecord {
 export function transformChatFromDB(record: ChatRecord): Chat {
   return {
     id: record.id,
-    type: 'regular',
+    type: record.type || 'regular',
     user: {
       id: record.user_id,
       username: record.users.username,
@@ -50,9 +50,9 @@ export function transformChatFromDB(record: ChatRecord): Chat {
       profileImage: record.models.profile_image_path,
       chatLink: record.models.chat_link,
     } as Model, // Type assertion since we don't need all Model fields
-    lastMessage: record.messages[0]?.content || '',
+    lastMessage: '',
     lastMessageAt: new Date(record.updated_at),
-    messages: record.messages.map(transformMessageFromDB),
+    messages: [],
   };
 }
 

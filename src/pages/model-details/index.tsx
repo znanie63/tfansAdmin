@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -193,9 +194,12 @@ export function ModelDetails() {
       setIsSubmittingPhoto(true);
 
       // Upload all photos in parallel
-      const uploadPromises = data.imageFiles.map(async (file) => {
+      const uploadPromises = data.imageFiles.map(async ({ file, description }) => {
         const imagePath = await uploadModelPhoto(file);
-        return createModelPhoto(model.id, { image: imagePath });
+        return createModelPhoto(model.id, { 
+          image: imagePath,
+          description: description.trim()
+        });
       });
 
       const newPhotos = await Promise.all(uploadPromises);
@@ -214,12 +218,27 @@ export function ModelDetails() {
   const handleTogglePhotoPrivate = async (photo: ModelPhoto) => {
     try {
       const updatedPhoto = await updateModelPhoto(photo.id, {
-        isPrivate: !photo.isPrivate
+        isPrivate: !photo.isPrivate,
       });
       setPhotos(prev => prev.map(p => 
         p.id === updatedPhoto.id ? updatedPhoto : p
       ));
       toast.success('Photo visibility updated');
+    } catch (error) {
+      console.error('Error updating photo:', error);
+      toast.error('Failed to update photo');
+    }
+  };
+
+  const handleUpdatePhotoDescription = async (photo: ModelPhoto, description: string) => {
+    try {
+      const updatedPhoto = await updateModelPhoto(photo.id, {
+        description: description.trim(),
+      });
+      setPhotos(prev => prev.map(p => 
+        p.id === updatedPhoto.id ? updatedPhoto : p
+      ));
+      toast.success('Photo keywords updated');
     } catch (error) {
       console.error('Error updating photo:', error);
       toast.error('Failed to update photo');
@@ -261,7 +280,7 @@ export function ModelDetails() {
   return (
     <div className="w-full min-h-screen flex flex-col">
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-4 h-16 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-4 h-16 px-4">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -276,9 +295,9 @@ export function ModelDetails() {
         </div>
       </div>
 
-      <div className="flex-1 grid gap-6 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr] 2xl:grid-cols-[360px_1fr] w-full p-8">
+      <div className="flex-1 grid gap-6 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr] 2xl:grid-cols-[360px_1fr] w-full">
         <div className="space-y-6">
-          <div className="sticky top-[80px]">
+          <div className="sticky top-[80px] mt-6">
             <ModelProfile
               model={model}
               onEdit={() => setShowEditDialog(true)}
@@ -287,7 +306,7 @@ export function ModelDetails() {
           </div>
         </div>
         <div className="flex-1 w-full min-w-0">
-          <Tabs defaultValue="posts" className="w-full">
+          <Tabs defaultValue="posts" className="w-full mt-6">
             <div className="sticky top-[80px] z-10 bg-background/95 backdrop-blur-sm pb-4">
               <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background/95 to-transparent" />
               <TabsList className="w-full h-12 sm:h-14 bg-card rounded-lg p-1 border shadow-sm">
@@ -331,6 +350,7 @@ export function ModelDetails() {
                 photos={photos}
                 onCreatePhoto={handleCreatePhoto}
                 onTogglePrivate={handleTogglePhotoPrivate}
+                onUpdateDescription={handleUpdatePhotoDescription}
                 onDeletePhoto={handleDeletePhoto}
               />
             </TabsContent>
@@ -377,7 +397,10 @@ export function ModelDetails() {
       </Dialog>
 
       <Dialog open={isCreatingPhoto} onOpenChange={setIsCreatingPhoto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={cn(
+          "max-w-4xl",
+          photos.length === 0 && "max-w-lg"
+        )}>
           <DialogHeader>
             <DialogTitle>Upload Photo</DialogTitle>
           </DialogHeader>

@@ -24,6 +24,7 @@ export interface ModelPhoto {
   modelId: string;
   image: string;
   isPrivate: boolean;
+  description: string;
   createdAt: Date;
 }
 
@@ -81,13 +82,14 @@ export interface Review {
   createdAt: Date;
 }
 
-export type PhotoRequestStatus = 'new' | 'cancel' | 'closed';
+export type PhotoRequestStatus = 'found' | 'not_found' | 'cancel' | 'completed';
 
 export interface PhotoRequest {
   id: string;
   chatId: string;
   userId: string;
   status: PhotoRequestStatus;
+  chance: number;
   photoUrl?: string;
   message: string;
   createdAt: Date;

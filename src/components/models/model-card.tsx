@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Model } from '@/types';
 import { toast } from 'sonner';
-import { MessageSquare, ImageIcon, Link, Pencil, Trash2 } from 'lucide-react';
+import { MessageSquare, ImageIcon, Pencil, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,18 +105,8 @@ export function ModelCard({ model, onEdit, onDelete, onCreatePost }: ModelCardPr
               <div className="flex items-center gap-1.5">
                 <ImageIcon className="h-4 w-4" />
                 <span>{model.storyCount || 0}</span>
-              </div>
-            </div>
-            <a
-              href={model.chatLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-primary hover:underline transition-colors"
-            >
-              Chat
-              <Link className="h-3.5 w-3.5" />
-            </a>
+              </div> 
+            </div> 
           </div>
         </CardContent>
       </Card>

@@ -8,7 +8,8 @@ export interface Setting {
 
 const DEFAULT_SETTINGS = {
   system_prompt: 'You are a helpful AI assistant.',
-  start_message: 'Hello! How can I help you today?'
+  start_message: 'Hello! How can I help you today?',
+  send_photo_chance: '50'
 };
 
 export async function getSettings(): Promise<Record<string, string>> {

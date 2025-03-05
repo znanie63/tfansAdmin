@@ -30,6 +30,7 @@ interface ModelPhotoRecord {
   id: string;
   model_id: string;
   image_path: string;
+  description: string;
   is_private: boolean;
   created_at: string;
 }
@@ -39,6 +40,7 @@ function transformModelPhotoFromDB(record: ModelPhotoRecord): ModelPhoto {
     id: record.id,
     modelId: record.model_id,
     image: record.image_path,
+    description: record.description || '',
     isPrivate: record.is_private,
     createdAt: new Date(record.created_at),
   };
@@ -180,12 +182,13 @@ export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
   return transformModelFromDB(data as ModelRecord);
 }
 
-export async function createModelPhoto(modelId: string, data: { image: string }): Promise<ModelPhoto> {
+export async function createModelPhoto(modelId: string, data: { image: string; description: string }): Promise<ModelPhoto> {
   const { data: photo, error } = await supabase
     .from('model_photos')
     .insert({
       model_id: modelId,
       image_path: data.image,
+      description: data.description,
       is_private: false,
     })
     .select()
@@ -238,11 +241,12 @@ export async function updateModel(id: string, model: Partial<Model>): Promise<Mo
   return transformModelFromDB(data as ModelRecord);
 }
 
-export async function updateModelPhoto(id: string, data: { isPrivate: boolean }): Promise<ModelPhoto> {
+export async function updateModelPhoto(id: string, data: { isPrivate?: boolean; description?: string }): Promise<ModelPhoto> {
   const { data: photo, error } = await supabase
     .from('model_photos')
     .update({
-      is_private: data.isPrivate,
+      ...(data.isPrivate !== undefined && { is_private: data.isPrivate }),
+      ...(data.description !== undefined && { description: data.description }),
     })
     .eq('id', id)
     .select()

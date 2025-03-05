@@ -1,4 +1,4 @@
-import { MessageSquare } from 'lucide-react';
+import { Star, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Review } from '@/types';
 import { getReviews } from '@/lib/reviews';
@@ -43,7 +43,7 @@ export function Reviews() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-primary/80" />
+            <Star className="h-8 w-8 text-primary/80" />
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Reviews</h1>
           </div>
           <p className="text-muted-foreground text-sm sm:text-base">

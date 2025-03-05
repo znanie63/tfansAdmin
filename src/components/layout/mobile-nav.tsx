@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Users,
   LayoutDashboard,
   UserCircle,
   Target,
+  MessageSquare,
+  Image,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,9 +28,14 @@ export function MobileNav() {
       href: '/tasks'
     },
     {
-      title: 'Users',
-      icon: Users,
-      href: '/users'
+      title: 'Chats',
+      icon: MessageSquare,
+      href: '/chats'
+    },
+    {
+      title: 'Photos',
+      icon: Image,
+      href: '/photo-requests'
     },
   ];
 
