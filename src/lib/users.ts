@@ -25,6 +25,11 @@ function transformUserFromDB(record: UserRecord): User {
 export async function getUsers(page: number = 1, limit: number = 20): Promise<{
   users: User[],
   hasMore: boolean
+  stats: {
+    totalUsers: number,
+    totalBalance: number,
+    totalSpent: number
+  }
 }> {
   // Get users with their balance transactions
   const { data: users, error: usersError } = await supabase
@@ -47,6 +52,12 @@ export async function getUsers(page: number = 1, limit: number = 20): Promise<{
 
   if (txError) throw txError;
 
+  // Calculate total stats from all transactions
+  const totalBalance = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const totalSpent = transactions
+    .filter(tx => tx.type === 'token_deduction')
+    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
   // Calculate balance and spending for each user
   const usersWithBalance = users.map(user => {
     const userTransactions = transactions.filter(tx => tx.user_id === user.user_id);
@@ -64,6 +75,11 @@ export async function getUsers(page: number = 1, limit: number = 20): Promise<{
 
   return {
     users: usersWithBalance.map(record => transformUserFromDB(record as UserRecord)),
-    hasMore: count ? (page * limit) < count : false
+    hasMore: count ? (page * limit) < count : false,
+    stats: {
+      totalUsers: count || 0,
+      totalBalance,
+      totalSpent
+    }
   };
 }

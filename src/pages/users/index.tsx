@@ -43,17 +43,12 @@ export function Users() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [{ users: usersData, hasMore: more }, adminsData] = await Promise.all([
+      const [{ users: usersData, hasMore: more, stats: userStats }, adminsData] = await Promise.all([
         getUsers(1),
         getAdmins()
       ]);
       
-      // Calculate stats
-      const totalUsers = usersData.length;
-      const totalBalance = usersData.reduce((sum, user) => sum + user.balance, 0);
-      const totalSpent = usersData.reduce((sum, user) => sum + user.totalSpent, 0);
-      
-      setStats({ totalUsers, totalBalance, totalSpent });
+      setStats(userStats);
       setUsers(usersData);
       setHasMore(more);
       setAdmins(adminsData);
@@ -71,11 +66,12 @@ export function Users() {
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      const { users: newUsers, hasMore: more } = await getUsers(nextPage);
+      const { users: newUsers, hasMore: more, stats: newStats } = await getUsers(nextPage);
       
       setUsers(prev => [...prev, ...newUsers]);
       setHasMore(more);
       setPage(nextPage);
+      setStats(newStats); // Update stats with latest totals
     } catch (error) {
       console.error('Error loading more users:', error);
       toast.error('Failed to load more users');
