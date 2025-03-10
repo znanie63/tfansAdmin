@@ -4,16 +4,28 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Chat } from '@/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
 interface ChatListProps {
   chats: Chat[];
   selectedChatId: string | null;
   onSelectChat: (chatId: string) => void;
+  onLoadMore: () => void;
+  hasMore: boolean;
+  loading: boolean;
 }
 
-export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps) {
+export function ChatList({
+  chats,
+  selectedChatId,
+  onSelectChat,
+  onLoadMore,
+  hasMore,
+  loading
+}: ChatListProps) {
   const [search, setSearch] = useState('');
+  const observerRef = useRef<IntersectionObserver>();
+  const lastChatRef = useRef<HTMLButtonElement>(null);
 
   const filteredChats = useMemo(() => chats.filter(chat => (
     search ? (
@@ -22,6 +34,24 @@ export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps)
       chat.model.lastName.toLowerCase().includes(search.toLowerCase())
     ) : true
   )), [chats, search]);
+
+  const lastChatCallback = useCallback((node: HTMLButtonElement | null) => {
+    if (loading) return;
+
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        onLoadMore();
+      }
+    });
+
+    if (node) {
+      observerRef.current.observe(node);
+    }
+  }, [loading, hasMore, onLoadMore]);
 
   return (
     <>
@@ -39,9 +69,10 @@ export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps)
       
       <ScrollArea className="flex-1">
         <div className="divide-y">
-          {filteredChats.map(chat => (
+          {filteredChats.map((chat, index) => (
             <button
               key={chat.id}
+              ref={index === filteredChats.length - 1 ? lastChatCallback : null}
               onClick={() => onSelectChat(chat.id)}
               className={cn(
                 "w-full px-3 sm:px-4 py-2.5 sm:py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors",
@@ -73,6 +104,11 @@ export function ChatList({ chats, selectedChatId, onSelectChat }: ChatListProps)
               </div>
             </button>
           ))}
+          {loading && (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </>

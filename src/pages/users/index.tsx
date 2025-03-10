@@ -23,10 +23,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function Users() {
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalBalance: 0,
@@ -40,8 +43,8 @@ export function Users() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [usersData, adminsData] = await Promise.all([
-        getUsers(),
+      const [{ users: usersData, hasMore: more }, adminsData] = await Promise.all([
+        getUsers(1),
         getAdmins()
       ]);
       
@@ -52,12 +55,32 @@ export function Users() {
       
       setStats({ totalUsers, totalBalance, totalSpent });
       setUsers(usersData);
+      setHasMore(more);
       setAdmins(adminsData);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreUsers = async () => {
+    if (!hasMore || loadingMore) return;
+
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const { users: newUsers, hasMore: more } = await getUsers(nextPage);
+      
+      setUsers(prev => [...prev, ...newUsers]);
+      setHasMore(more);
+      setPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more users:', error);
+      toast.error('Failed to load more users');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -197,7 +220,15 @@ export function Users() {
           </div>
 
           {filteredUsers.length > 0 ? (
-            <DataTable columns={columns} data={filteredUsers} />
+            <>
+              <DataTable
+                columns={columns}
+                data={filteredUsers}
+                onLoadMore={loadMoreUsers}
+                hasMore={hasMore}
+                loading={loadingMore}
+              />
+            </>
           ) : (
             renderEmptyState()
           )}

@@ -11,8 +11,11 @@ export function Chats() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [chats, setChats] = useState<Omit<Chat, 'messages'>[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [selectedChatMessages, setSelectedChatMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   
   const selectedChat = selectedChatId ? {
@@ -43,13 +46,34 @@ export function Chats() {
   const loadChats = async () => {
     try {
       setLoading(true);
-      const data = await getChats();
+      const { chats: data, hasMore: more } = await getChats(1);
       setChats(data);
+      setHasMore(more);
+      setPage(1);
     } catch (error) {
       console.error('Error loading chats:', error);
       toast.error('Failed to load chats');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreChats = async () => {
+    if (!hasMore || loadingMore) return;
+
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const { chats: newChats, hasMore: more } = await getChats(nextPage);
+      
+      setChats(prev => [...prev, ...newChats]);
+      setHasMore(more);
+      setPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more chats:', error);
+      toast.error('Failed to load more chats');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -105,6 +129,9 @@ export function Chats() {
             chats={chats}
             selectedChatId={selectedChatId}
             onSelectChat={setSelectedChatId}
+            onLoadMore={loadMoreChats}
+            hasMore={hasMore}
+            loading={loadingMore}
           />
         </div>
 

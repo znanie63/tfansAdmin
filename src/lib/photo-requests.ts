@@ -26,7 +26,14 @@ function transformPhotoRequestFromDB(record: PhotoRequestRecord): PhotoRequest {
   };
 }
 
-export async function getPhotoRequests(includeCompleted: boolean = false): Promise<PhotoRequest[]> {
+export async function getPhotoRequests(
+  page: number = 1,
+  limit: number = 20,
+  includeCompleted: boolean = false
+): Promise<{
+  requests: PhotoRequest[],
+  hasMore: boolean
+}> {
   const { data, error } = await supabase
     .from('photo_requests')
     .select(`
@@ -46,6 +53,7 @@ export async function getPhotoRequests(includeCompleted: boolean = false): Promi
       )
     `)
     .not('status', 'eq', includeCompleted ? null : 'closed')
+    .range((page - 1) * limit, page * limit - 1)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -53,10 +61,21 @@ export async function getPhotoRequests(includeCompleted: boolean = false): Promi
     throw new Error('Failed to fetch photo requests');
   }
 
-  return data.map(record => ({
+  // Get total count to determine if there are more requests
+  const { count } = await supabase
+    .from('photo_requests')
+    .select('*', { count: 'exact', head: true })
+    .not('status', 'eq', includeCompleted ? null : 'closed');
+
+  const transformedRequests = data.map(record => ({
     ...transformPhotoRequestFromDB(record),
     chat: record.chat ? transformChatFromDB(record.chat) : undefined
   }));
+
+  return {
+    requests: transformedRequests,
+    hasMore: count ? (page * limit) < count : false
+  };
 }
 
 export async function updatePhotoRequestStatus(

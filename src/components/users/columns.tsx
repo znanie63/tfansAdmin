@@ -52,7 +52,13 @@ export const columns: ColumnDef<User>[] = [
     accessorKey: "joinedAt",
     header: "Joined",
     cell: ({ row }) => {
-      return formatDistanceToNow(new Date(row.original.joinedAt), { addSuffix: true })
+      return new Date(row.original.joinedAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     },
   },
 ]

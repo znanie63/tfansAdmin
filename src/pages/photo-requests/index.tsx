@@ -18,6 +18,8 @@ interface RequestStats {
 
 export function PhotoRequests() {
   const [requests, setRequests] = useState<PhotoRequest[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<RequestStats>({
     found: 0,
     not_found: 0,
@@ -26,6 +28,7 @@ export function PhotoRequests() {
     totalSpent: 0
   });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<PhotoRequestStatus | 'all'>('all');
 
   const sortedRequests = useMemo(() => {
@@ -83,7 +86,7 @@ export function PhotoRequests() {
   const loadRequests = async () => {
     try {
       setLoading(true);
-      let data = await getPhotoRequests(selectedStatus === 'closed');
+      const { requests: data, hasMore: more } = await getPhotoRequests(1, 20, selectedStatus === 'closed');
       
       const modelIds = data.map(req => req.chat?.model.id).filter(Boolean);
       const { data: modelPrices } = await supabase
@@ -91,12 +94,14 @@ export function PhotoRequests() {
         .select('id, price_photo')
         .in('id', modelIds);
 
-      data = data.map(req => ({
+      const transformedData = data.map(req => ({
         ...req,
         modelPhotoPrice: modelPrices?.find(m => m.id === req.chat?.model.id)?.price_photo || 0
       }));
 
-      setRequests(data);
+      setRequests(transformedData);
+      setHasMore(more);
+      setPage(1);
     } catch (error) {
       console.error('Error loading photo requests:', error);
       toast.error('Failed to load photo requests');
@@ -105,6 +110,39 @@ export function PhotoRequests() {
     }
   };
 
+  const loadMoreRequests = async () => {
+    if (!hasMore || loadingMore) return;
+
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const { requests: newData, hasMore: more } = await getPhotoRequests(
+        nextPage,
+        20,
+        selectedStatus === 'closed'
+      );
+
+      const modelIds = newData.map(req => req.chat?.model.id).filter(Boolean);
+      const { data: modelPrices } = await supabase
+        .from('models')
+        .select('id, price_photo')
+        .in('id', modelIds);
+
+      const transformedData = newData.map(req => ({
+        ...req,
+        modelPhotoPrice: modelPrices?.find(m => m.id === req.chat?.model.id)?.price_photo || 0
+      }));
+
+      setRequests(prev => [...prev, ...transformedData]);
+      setHasMore(more);
+      setPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more photo requests:', error);
+      toast.error('Failed to load more photo requests');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleStatusChange = async (requestId: string, status: PhotoRequestStatus) => {
     try {
@@ -145,6 +183,9 @@ export function PhotoRequests() {
         <RequestList
           requests={sortedRequests}
           onStatusChange={handleStatusChange}
+          onLoadMore={loadMoreRequests}
+          hasMore={hasMore}
+          loading={loadingMore}
         />
       </div>
     </div>

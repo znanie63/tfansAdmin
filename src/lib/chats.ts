@@ -3,7 +3,10 @@ import { Chat, Message } from '@/types';
 import { transformChatFromDB, transformMessageFromDB } from './transformers';
 import type { ChatRecord, MessageRecord } from './transformers';
 
-export async function getChats(): Promise<Omit<Chat, 'messages'>[]> {
+export async function getChats(page: number = 1, limit: number = 20): Promise<{
+  chats: Omit<Chat, 'messages'>[],
+  hasMore: boolean
+}> {
   const { data: chats, error } = await supabase
     .from('chats')
     .select(`
@@ -20,6 +23,7 @@ export async function getChats(): Promise<Omit<Chat, 'messages'>[]> {
         photo_url
       )
     `)
+    .range((page - 1) * limit, page * limit - 1)
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -27,7 +31,12 @@ export async function getChats(): Promise<Omit<Chat, 'messages'>[]> {
     throw new Error('Failed to fetch chats');
   }
 
-  return (chats as ChatRecord[]).map(chat => ({
+  // Get total count to determine if there are more chats
+  const { count } = await supabase
+    .from('chats')
+    .select('*', { count: 'exact', head: true });
+
+  const transformedChats = (chats as ChatRecord[]).map(chat => ({
     id: chat.id,
     type: 'regular',
     user: {
@@ -47,6 +56,11 @@ export async function getChats(): Promise<Omit<Chat, 'messages'>[]> {
     lastMessage: '',
     lastMessageAt: new Date(chat.updated_at),
   }));
+
+  return {
+    chats: transformedChats,
+    hasMore: count ? (page * limit) < count : false
+  };
 }
 
 export async function getChatMessages(chatId: string): Promise<Message[]> {
@@ -54,8 +68,7 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
     .from('messages')
     .select('*')
     .eq('chat_id', chatId)
-    .order('created_at', { ascending: false })
-    .limit(50);
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching messages:', error);

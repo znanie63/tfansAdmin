@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { User } from '@/types';
 
-interface UserRecord {
+export interface UserRecord {
   id: string;
   user_id: string;
   username: string;
@@ -22,14 +22,23 @@ function transformUserFromDB(record: UserRecord): User {
   };
 }
 
-export async function getUsers(): Promise<User[]> {
+export async function getUsers(page: number = 1, limit: number = 20): Promise<{
+  users: User[],
+  hasMore: boolean
+}> {
   // Get users with their balance transactions
   const { data: users, error: usersError } = await supabase
     .from('users')
     .select('user_id, username, photo_url, created_at')
+    .range((page - 1) * limit, page * limit - 1)
     .order('created_at', { ascending: false });
 
   if (usersError) throw usersError;
+
+  // Get total count to determine if there are more users
+  const { count } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true });
 
   // Get all balance transactions
   const { data: transactions, error: txError } = await supabase
@@ -53,5 +62,8 @@ export async function getUsers(): Promise<User[]> {
     };
   });
 
-  return usersWithBalance.map(record => transformUserFromDB(record as UserRecord));
+  return {
+    users: usersWithBalance.map(record => transformUserFromDB(record as UserRecord)),
+    hasMore: count ? (page * limit) < count : false
+  };
 }
