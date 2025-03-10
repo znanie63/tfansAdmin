@@ -68,8 +68,6 @@ export interface User {
   username: string;
   avatar: string;
   joinedAt: Date;
-  balance: number;
-  totalSpent: number;
 }
 
 export interface Review {

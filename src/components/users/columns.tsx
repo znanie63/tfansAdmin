@@ -5,6 +5,34 @@ import { Badge } from "@/components/ui/badge"
 import { Coins, TrendingDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useUserBalance } from '@/hooks/use-user-balance';
+
+function UserBalanceCell({ userId }: { userId: string }) {
+  const { balance, totalSpent, loading } = useUserBalance(userId);
+
+  if (loading) {
+    return <div className="h-8 animate-pulse bg-muted rounded" />;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "w-fit font-medium",
+          balance > 0 ? "border-primary/50 text-primary" : "border-muted-foreground"
+        )}
+      >
+        <Coins className="h-3.5 w-3.5 mr-1.5" />
+        {balance} TFC
+      </Badge>
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
+        <TrendingDown className="h-3 w-3" />
+        Spent: {totalSpent} TFC
+      </span>
+    </div>
+  );
+}
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -25,28 +53,7 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: "balance",
     header: "Balance",
-    cell: ({ row }) => {
-      const { balance, totalSpent } = row.original;
-      
-      return (
-        <div className="flex flex-col gap-1">
-          <Badge 
-            variant="outline" 
-            className={cn(
-              "w-fit font-medium",
-              balance > 0 ? "border-primary/50 text-primary" : "border-muted-foreground"
-            )}
-          >
-            <Coins className="h-3.5 w-3.5 mr-1.5" />
-            {balance} TFC
-          </Badge>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <TrendingDown className="h-3 w-3" />
-            Spent: {totalSpent} TFC
-          </span>
-        </div>
-      )
-    },
+    cell: ({ row }) => <UserBalanceCell userId={row.original.id} />,
   },
   {
     accessorKey: "joinedAt",
