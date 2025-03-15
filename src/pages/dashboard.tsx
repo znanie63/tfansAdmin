@@ -12,6 +12,7 @@ import {
   TrendingDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ModelChart } from '@/components/stats/model-chart';
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -163,6 +164,10 @@ export function Dashboard() {
         </Card>
       </div>
 
+      <div className="h-px bg-border my-8" />
+      
+      <ModelChart />
+      
       <div className="h-px bg-border my-8" />
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

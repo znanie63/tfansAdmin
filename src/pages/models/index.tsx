@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Model } from '@/types';
+import { StatusFilter } from './components/status-filter';
 import { getModels, createModel, updateModel, deleteModel, uploadModelImage } from '@/lib/models';
 import { Header } from './components/header';
 import { Search } from './components/search';
@@ -10,6 +11,7 @@ import { EditDialog } from './components/edit-dialog';
 
 export function Models() {
   const [search, setSearch] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,14 @@ export function Models() {
   };
 
   const filteredModels = models.filter(model => 
-    `${model.firstName} ${model.lastName}`.toLowerCase().includes(search.toLowerCase())
+    (search.trim() ? 
+      `${model.firstName} ${model.lastName}`.toLowerCase().includes(search.toLowerCase())
+      : true) &&
+    (selectedStatus === 'all' ? 
+      true : 
+      selectedStatus === 'active' ? 
+        model.isActive : 
+        !model.isActive)
   );
 
   if (loading) {
@@ -147,22 +156,35 @@ export function Models() {
   return (
     <div className="min-w-0 w-full space-y-8">
       <Header onCreateModel={handleCreateModel} />
-      <Search 
-        key="model-search"
-        value={search} 
-        onChange={setSearch} 
-      />
+      <div className="space-y-4">
+        <Search 
+          key="model-search"
+          value={search} 
+          onChange={setSearch} 
+        />
+        <StatusFilter
+          selectedStatus={selectedStatus}
+          onStatusChange={setSelectedStatus}
+        />
+      </div>
       
       {filteredModels.length === 0 ? (
         <EmptyState />
       ) : (
-        <ModelGrid
-          key="model-grid"
-          models={filteredModels}
-          onEdit={handleEditModel}
-          onDelete={handleDeleteModel}
-          onCreatePost={handleCreatePost}
-        />
+        <div className="space-y-4">
+          {selectedStatus === 'inactive' && (
+            <p className="text-sm text-muted-foreground text-center bg-muted/50 py-3 px-4 rounded-lg">
+              These models and their posts are not visible in the mobile app
+            </p>
+          )}
+          <ModelGrid
+            key="model-grid"
+            models={filteredModels}
+            onEdit={handleEditModel}
+            onDelete={handleDeleteModel}
+            onCreatePost={handleCreatePost}
+          />
+        </div>
       )}
 
       <EditDialog

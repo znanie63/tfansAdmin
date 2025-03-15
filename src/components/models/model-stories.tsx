@@ -30,13 +30,6 @@ function getTimeAgo(date: Date) {
 export function ModelStories({ stories, onCreateStory, onDeleteStory }: ModelStoriesProps) {
   const [storyToDelete, setStoryToDelete] = useState<string | null>(null);
 
-  const handleConfirmDelete = () => {
-    if (storyToDelete) {
-      onDeleteStory(storyToDelete);
-      setStoryToDelete(null);
-    }
-  };
-
   return (
     <div className="min-w-0 w-full space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4">
@@ -114,7 +107,12 @@ export function ModelStories({ stories, onCreateStory, onDeleteStory }: ModelSto
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={handleConfirmDelete}
+              onClick={() => {
+                if (storyToDelete) {
+                  onDeleteStory(storyToDelete);
+                  setStoryToDelete(null);
+                }
+              }}
             >
               Delete
             </AlertDialogAction>

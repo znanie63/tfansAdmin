@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Model, ModelPhoto } from '@/types';
+import { assignCategories } from '@/lib/categories';
 import { compressImage } from './utils/image';
 
 // Constants
@@ -23,7 +24,15 @@ interface ModelRecord {
   profile_image_path: string;
   characteristics: Record<string, string> | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string,
+  categories: {
+    category: {
+      id: string;
+      name: string;
+      created_at: string;
+      updated_at: string;
+    };
+  }[];
 }
 
 interface ModelPhotoRecord {
@@ -62,9 +71,16 @@ function transformModelFromDB(record: ModelRecord): Model {
     instagramLink: record.instagram_link || undefined,
     otherSocialLink: record.other_social_link || undefined,
     profileImage: record.profile_image_path,
+    categories: record.categories?.map(c => ({
+      id: c.category.id,
+      name: c.category.name,
+      createdAt: new Date(c.category.created_at),
+      updatedAt: new Date(c.category.updated_at)
+    })),
     prompt: record.prompt || undefined,
     price: record.price || 50,
     price_photo: record.price_photo || 50,
+    isActive: record.is_active,
   };
 }
 
@@ -86,6 +102,7 @@ function transformModelToDB(model: Partial<Model>): Partial<ModelRecord> {
     ...(model.prompt !== undefined && { prompt: model.prompt || null }),
     ...(model.price !== undefined && { price: model.price }),
     ...(model.price_photo !== undefined && { price_photo: model.price_photo }),
+    ...(model.isActive !== undefined && { is_active: model.isActive }),
   };
 }
 
@@ -162,24 +179,44 @@ export async function uploadModelPhoto(file: File): Promise<string> {
 }
 
 export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
-  const dbRecord = transformModelToDB(model);
+  try {
+    let imagePath = undefined;
+    console.log('Creating model with data:', model); // Debug log
+    const categoryIds = model.categories?.map(c => c.id) || [];
+    delete model.categories; // Remove categories from model data
 
-  const { data, error } = await supabase
-    .from('models')
-    .insert(dbRecord)
-    .select()
-    .single();
+    if (model.imageFile) {
+      imagePath = await uploadModelImage(model.imageFile);
+      console.log('Image uploaded:', imagePath); // Debug log
+    }
 
-  if (error) {
+    const dbRecord = transformModelToDB({
+      ...model,
+      ...(imagePath && { profileImage: imagePath })
+    });
+
+    const { data, error } = await supabase
+      .from('models')
+      .insert(dbRecord)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('No data returned after creating model');
+    }
+
+    // Assign categories after model creation
+    await assignCategories(data.id, categoryIds);
+
+    return transformModelFromDB(data as ModelRecord);
+  } catch (error) {
     console.error('Create error:', error);
     throw new Error('Failed to create model');
   }
-
-  if (!data) {
-    throw new Error('No data returned after creating model');
-  }
-
-  return transformModelFromDB(data as ModelRecord);
 }
 
 export async function createModelPhoto(modelId: string, data: { image: string; description: string }): Promise<ModelPhoto> {
@@ -203,42 +240,55 @@ export async function createModelPhoto(modelId: string, data: { image: string; d
 }
 
 export async function updateModel(id: string, model: Partial<Model>): Promise<Model> {
-  console.log('Updating model:', { id, model }); // Debug log
+  try {
+    let imagePath = undefined;
+    // Extract and store categories before deleting from model data
+    const categoryIds = Array.isArray(model.categories) 
+      ? model.categories 
+      : model.categories?.map(c => c.id) || [];
 
-  // Handle image upload if provided
-  let imagePath = model.profileImage;
-  if ('imageFile' in model && model.imageFile instanceof File) {
-    try {
+    console.log('Updating model:', { id, model, categoryIds }); // Debug log
+
+    const modelData = { ...model };
+    delete modelData.categories; // Remove categories from model data
+
+    if (model.imageFile) {
       imagePath = await uploadModelImage(model.imageFile);
       console.log('New image uploaded:', imagePath); // Debug log
-    } catch (error) {
-      console.error('Image upload error:', error);
-      throw new Error('Failed to upload new profile image');
     }
-  }
 
-  const dbRecord = transformModelToDB(model);
+    const dbRecord = transformModelToDB({
+      ...modelData, // Use modelData instead of model to exclude categories
+      ...(imagePath && { profileImage: imagePath })
+    });
 
-  const { data, error } = await supabase
-    .from('models')
-    .update({
-      ...dbRecord,
-      ...(imagePath && { profile_image_path: imagePath })
-    })
-    .eq('id', id)
-    .select()
-    .single();
+    console.log('Database record:', dbRecord); // Debug log
 
-  if (error) {
+    const { data, error } = await supabase
+      .from('models')
+      .update(dbRecord)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database update error:', error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('Model not found');
+    }
+
+    // Update category assignments
+    console.log('Updating categories:', categoryIds); // Debug log
+    await assignCategories(id, categoryIds);
+
+    return transformModelFromDB(data as ModelRecord);
+  } catch (error) {
     console.error('Update error:', error);
     throw new Error('Failed to update model');
   }
-
-  if (!data) {
-    throw new Error('Model not found');
-  }
-
-  return transformModelFromDB(data as ModelRecord);
 }
 
 export async function updateModelPhoto(id: string, data: { isPrivate?: boolean; description?: string }): Promise<ModelPhoto> {
@@ -292,6 +342,14 @@ export async function getModels(): Promise<Model[]> {
     .from('models') 
     .select(`
       *,
+      categories:model_category_assignments(
+        category:model_categories(
+          id,
+          name,
+          created_at,
+          updated_at
+        )
+      ),
       postCount:posts(count),
       storyCount:stories(count)
     `)
@@ -322,7 +380,17 @@ export async function getModels(): Promise<Model[]> {
 export async function getModel(id: string): Promise<Model> {
   const { data, error } = await supabase
     .from('models')
-    .select('*')
+    .select(`
+      *,
+      categories:model_category_assignments(
+        category:model_categories(
+          id,
+          name,
+          created_at,
+          updated_at
+        )
+      )
+    `)
     .eq('id', id)
     .single();
 

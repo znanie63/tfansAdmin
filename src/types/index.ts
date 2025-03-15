@@ -15,6 +15,8 @@ export interface Model {
   profileImage: string;
   price: number;
   price_photo: number;
+  isActive: boolean;
+  categories?: Category[];
   postCount?: number;
   storyCount?: number;
 }
@@ -110,4 +112,11 @@ export interface Chat {
   lastMessage: string;
   lastMessageAt: Date;
   messages: Message[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

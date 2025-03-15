@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Model } from '@/types';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { MessageSquare, ImageIcon, Pencil, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -47,7 +49,10 @@ export function ModelCard({ model, onEdit, onDelete, onCreatePost }: ModelCardPr
   return (
     <>
       <Card 
-        className="group h-full flex flex-col hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer"
+        className={cn(
+          "group h-full flex flex-col hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer",
+          !model.isActive && "opacity-75"
+        )}
         onClick={handleClick}
       >
         <CardHeader className="p-3 sm:p-4 relative">
@@ -107,6 +112,13 @@ export function ModelCard({ model, onEdit, onDelete, onCreatePost }: ModelCardPr
                 <span>{model.storyCount || 0}</span>
               </div> 
             </div> 
+            <Badge variant="secondary" className={cn(
+              model.isActive 
+                ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}>
+              {model.isActive ? "Active" : "Inactive"}
+            </Badge>
           </div>
         </CardContent>
       </Card>

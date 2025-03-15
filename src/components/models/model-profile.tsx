@@ -1,10 +1,12 @@
 import { Model } from '@/types';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 import {
   Languages,
   Ruler,
+  Power,
   CircleDotIcon,
   Weight,
   Link,
@@ -185,8 +187,12 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
         <Separator />
         <div className="flex flex-col gap-2">
           <Button
-            onClick={onEdit}
-            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            variant="outline" 
+            className="w-full"
           >
             <Pencil className="h-4 w-4 mr-2" />
             Edit Profile

@@ -56,10 +56,14 @@ export function PhotoRequests() {
     try {
       const { data: requests } = await supabase
         .from('photo_requests')
-        .select('status');
+        .select('status, id')
+        .not('status', 'eq', null);
 
       const counts = (requests || []).reduce((acc, req) => {
-        acc[req.status] = (acc[req.status] || 0) + 1;
+        const status = req.status;
+        if (status) {
+          acc[status] = (acc[status] || 0) + 1;
+        }
         return acc;
       }, {} as Record<string, number>);
 
@@ -67,7 +71,7 @@ export function PhotoRequests() {
         .from('balance')
         .select('amount')
         .eq('type', 'token_deduction')
-        .like('description', '%фото%');
+        .ilike('description', '%photo%');
 
       const totalSpent = balanceData?.reduce((sum, record) => sum + Math.abs(record.amount), 0) || 0;
 
@@ -75,7 +79,7 @@ export function PhotoRequests() {
         found: counts.found || 0,
         not_found: counts.not_found || 0,
         cancel: counts.cancel || 0,
-        closed: counts.closed || 0,
+        completed: counts.completed || 0,
         totalSpent
       });
     } catch (error) {
@@ -147,12 +151,17 @@ export function PhotoRequests() {
   const handleStatusChange = async (requestId: string, status: PhotoRequestStatus) => {
     try {
       await updatePhotoRequestStatus(requestId, status);
+      
+      const oldStatus = requests.find(r => r.id === requestId)?.status;
+      
       // Update stats locally
-      setStats(prev => ({
-        ...prev,
-        [status]: prev[status] + 1,
-        [requests.find(r => r.id === requestId)?.status || 'found']: prev[requests.find(r => r.id === requestId)?.status || 'found'] - 1
-      }));
+      if (oldStatus) {
+        setStats(prev => ({
+          ...prev,
+          [status]: (prev[status] || 0) + 1,
+          [oldStatus]: Math.max(0, (prev[oldStatus] || 0) - 1)
+        }));
+      }
       
       setRequests(prev => prev.map(req => 
         req.id === requestId ? { ...req, status } : req

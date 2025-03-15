@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -6,17 +7,19 @@ import * as z from 'zod';
 import { Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { getCategories, Category } from '@/lib/categories';
+import { BasicInfo } from './form/basic-info';
+import { Status } from './form/status';
+import { Personality } from './form/personality';
+import { CategoriesSection } from './form/categories-section';
+import { Characteristics } from './form/characteristics';
+import { SocialLinks } from './form/social-links';
+import { Pricing } from './form/pricing';
 import { Model } from '@/types';
-import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -37,6 +40,8 @@ const formSchema = z.object({
   otherSocialLink: z.string().url('Please enter a valid URL').optional(),
   price: z.number().min(1, 'Price must be at least 1 TFC'),
   price_photo: z.number().min(1, 'Photo price must be at least 1 TFC'),
+  isActive: z.boolean(),
+  categories: z.array(z.string()).optional(),
 });
 
 interface ModelFormProps {
@@ -54,7 +59,27 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       Object.entries(initialData.characteristics).map(([key, value]) => ({ key, value })) : 
       []
   );
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadCategories();
+    // Initialize selected categories from initialData
+    if (initialData?.categories) {
+      setSelectedCategories(initialData.categories.map(c => c.id));
+    }
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const data = await getCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast.error('Failed to load categories');
+    }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,6 +98,8 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       otherSocialLink: initialData?.otherSocialLink || '',
       price: initialData?.price || 50,
       price_photo: initialData?.price_photo || 50,
+      isActive: initialData?.isActive ?? true,
+      categories: initialData?.categories?.map(c => c.id) || [],
     },
   });
 
@@ -118,17 +145,18 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const imageFile = fileInputRef.current?.files?.[0];
-      
+
       // Only require image for new models
       if (!initialData && !imageFile) {
         toast.error('Please upload a profile image');
         return;
       }
-      
+
       // Prepare form data
       await onSubmit({
         ...values,
         languages: values.languages.split(',').map(lang => lang.trim()),
+        categories: selectedCategories,
         characteristics: characteristics.reduce((acc, { key, value }) => {
           if (key && value) acc[key] = value;
           return acc;
@@ -185,285 +213,21 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="firstName"
-              key="field-firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="lastName"
-              key="field-lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="nickname"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nickname</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="nickname" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <BasicInfo form={form} />
+          <Status form={form} />
+          <Personality form={form} />
+          <CategoriesSection
+            form={form}
+            categories={categories}
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
           />
-
-          <FormField
-            control={form.control}
-            name="quote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quote</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    {...field} 
-                    className="min-h-[100px] resize-none" 
-                    placeholder="Write a short bio or memorable quote..."
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <Characteristics
+            characteristics={characteristics}
+            setCharacteristics={setCharacteristics}
           />
-
-          <div className="grid grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="height"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Height (cm)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="weight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Weight (kg)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="space-y-6 border-t pt-6">
-            <h3 className="text-lg font-semibold">Personality Settings</h3>
-            
-            <FormField
-              control={form.control}
-              name="prompt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Personality Prompt</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      {...field}
-                      className="min-h-[150px] resize-none"
-                      placeholder="Write a detailed prompt describing the model's personality, communication style, and how they should interact with users..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="languages"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Languages</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field}
-                    placeholder="English, Spanish, French (comma-separated)"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <FormLabel>Custom Characteristics (Optional)</FormLabel>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addCharacteristic}
-              >
-                Add Characteristic
-              </Button>
-            </div>
-            {characteristics.map((char, index) => (
-              <div key={index} className="flex gap-4">
-                <Input
-                  placeholder="Name (e.g. Eye Color)"
-                  value={char.key}
-                  onChange={(e) => updateCharacteristic(index, 'key', e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="Value (e.g. Blue)"
-                  value={char.value}
-                  onChange={(e) => updateCharacteristic(index, 'value', e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeCharacteristic(index)}
-                  className="shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <FormField
-            control={form.control}
-            name="chatLink"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Chat Link</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field}
-                    placeholder="https://t.me/username"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="instagramLink"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Instagram Link (optional)</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field}
-                    placeholder="https://instagram.com/username"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="otherSocialLink"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Other Social Link (optional)</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field}
-                    placeholder="https://example.com/profile"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-
-        <div className="space-y-6 border-t pt-6">
-          <h3 className="text-lg font-semibold">Pricing Settings</h3>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Message Price (TFC)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Cost per 1000 tokens
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="price_photo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Photo Price (TFC)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Cost per photo request
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <SocialLinks form={form} />
+          <Pricing form={form} />
         </div>
 
         <div className="p-6 border-t">

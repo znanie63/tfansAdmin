@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   MessageSquare,
   ImageIcon,
+  BarChart as ChartIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +20,7 @@ import { ModelProfile } from '@/components/models/model-profile';
 import { ModelPosts } from '@/components/models/model-posts';
 import { ModelStories } from '@/components/models/model-stories';
 import { ModelPhotos } from '@/components/models/model-photos';
+import { ModelStats } from '@/components/models/model-stats';
 import { ModelPhotoForm } from '@/components/models/model-photo-form';
 import { PostForm } from '@/components/posts/post-form';
 import { StoryForm } from '@/components/stories/story-form';
@@ -280,7 +282,8 @@ export function ModelDetails() {
   return (
     <div className="w-full min-h-screen flex flex-col">
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-4 h-16 px-4">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -292,6 +295,20 @@ export function ModelDetails() {
           <h1 className="text-2xl sm:text-3xl font-bold truncate">
             {model.firstName} {model.lastName}
           </h1>
+          </div>
+          <div 
+            className="relative group"
+            title={model.isActive ? "Model is active" : "Model is inactive"}
+          >
+            <div className={cn(
+              "h-3 w-3 rounded-full",
+              model.isActive ? "bg-green-500" : "bg-gray-300",
+              model.isActive && "animate-pulse"
+            )} />
+            <span className="absolute -bottom-8 right-0 min-w-max px-2 py-1 bg-black/80 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+              {model.isActive ? "Model is active" : "Model is inactive"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -306,10 +323,16 @@ export function ModelDetails() {
           </div>
         </div>
         <div className="flex-1 w-full min-w-0">
-          <Tabs defaultValue="posts" className="w-full mt-6">
+          <Tabs defaultValue="stats" className="w-full mt-6">
             <div className="sticky top-[80px] z-10 bg-background/95 backdrop-blur-sm pb-4">
               <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background/95 to-transparent" />
               <TabsList className="w-full h-12 sm:h-14 bg-card rounded-lg p-1 border shadow-sm">
+                <TabsTrigger value="stats" className="flex-1 h-10 sm:h-12">
+                  <div className="flex items-center justify-center gap-1 sm:gap-2">
+                    <ChartIcon className="h-4 w-4" />
+                    <span className="font-medium">Stats</span>
+                  </div>
+                </TabsTrigger>
                 <TabsTrigger value="posts" className="flex-1 h-10 sm:h-12">
                   <div className="flex items-center justify-center gap-1 sm:gap-2">
                     <MessageSquare className="h-4 w-4" />
@@ -331,6 +354,9 @@ export function ModelDetails() {
               </TabsList>
               <div className="absolute inset-x-0 -bottom-4 h-4 bg-gradient-to-b from-background/95 to-transparent" />
             </div>
+            <TabsContent value="stats" className="w-full min-h-[400px]">
+              <ModelStats modelId={model.id} />
+            </TabsContent>
             <TabsContent value="posts" className="w-full min-h-[400px]">
               <ModelPosts 
                 posts={posts} 

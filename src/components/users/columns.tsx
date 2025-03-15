@@ -49,6 +49,10 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: "username",
     header: "Username",
+    cell: ({ row }) => {
+      const username = row.original.username;
+      return username || <span className="text-muted-foreground italic">No username</span>;
+    },
   },
   {
     accessorKey: "balance",

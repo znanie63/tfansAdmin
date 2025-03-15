@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Database, MessageSquare, Sparkles, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Categories } from './components/categories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,6 +103,12 @@ export function Settings() {
         <Database className="h-8 w-8 text-primary/80" />
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
       </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <Categories />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6">
         <Card>

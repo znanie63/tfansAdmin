@@ -28,10 +28,10 @@ export function ChatList({
   const lastChatRef = useRef<HTMLButtonElement>(null);
 
   const filteredChats = useMemo(() => chats.filter(chat => (
-    search ? (
-      chat.user.username.toLowerCase().includes(search.toLowerCase()) ||
-      chat.model.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      chat.model.lastName.toLowerCase().includes(search.toLowerCase())
+    search.trim() ? (
+      (chat.user?.username?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (chat.model?.firstName?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (chat.model?.lastName?.toLowerCase() || '').includes(search.toLowerCase())
     ) : true
   )), [chats, search]);
 
