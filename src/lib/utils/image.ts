@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 const MAX_WIDTH = 1200;
 const MAX_HEIGHT = 1200;
 const QUALITY = 0.8;
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 export async function compressImage(file: File): Promise<File> {
   // Validate file type

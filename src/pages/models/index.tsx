@@ -57,27 +57,19 @@ export function Models() {
 
   const handleCreateModel = async (modelData: any) => {
     try {
-      let imagePath = undefined;
-      console.log('Creating model with data:', modelData); // Debug log
+      console.log('Creating model:', modelData);
 
-      if (modelData.imageFile) {
-        imagePath = await uploadModelImage(modelData.imageFile);
-      }
+      const newModel = await createModel(modelData);
+      console.log('Model created successfully:', newModel);
 
-      await createModel({
-        ...modelData,
-        profileImage: imagePath || '',
-      } as any);
-
-      // Refresh models from database after creation
-      await refreshModels();
-      console.log('Models after refresh:', models); // Debug log
-
+      setModels(prev => [newModel, ...prev]);
       toast.success('Model profile created successfully');
+      return true;
     } catch (error) {
       console.error('Error creating model:', error);
-      toast.error('Failed to create model profile');
-      throw error;
+      const message = error instanceof Error ? error.message : 'Failed to create model profile';
+      toast.error(message);
+      return false;
     }
   };
 
@@ -183,6 +175,7 @@ export function Models() {
             onEdit={handleEditModel}
             onDelete={handleDeleteModel}
             onCreatePost={handleCreatePost}
+            isSubmitting={loading}
           />
         </div>
       )}

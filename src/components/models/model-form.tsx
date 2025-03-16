@@ -12,6 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { getCategories, Category } from '@/lib/categories';
+import { ProfileImage } from './form/profile-image';
 import { BasicInfo } from './form/basic-info';
 import { Status } from './form/status';
 import { Personality } from './form/personality';
@@ -54,14 +55,15 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
   const [previewImage, setPreviewImage] = useState<string>(
     initialData?.profileImage || ''
   );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [characteristics, setCharacteristics] = useState<Array<{ key: string; value: string }>>(
     initialData?.characteristics ? 
       Object.entries(initialData.characteristics).map(([key, value]) => ({ key, value })) : 
       []
   );
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showDebug] = useState(process.env.NODE_ENV === 'development');
 
   useEffect(() => {
     loadCategories();
@@ -103,29 +105,15 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
     },
   });
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImageChange = (file: File) => {
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        toast.error('File must be an image');
-        return;
-      }
-
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setPreviewImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
   };
 
   const addCharacteristic = () => {
@@ -144,31 +132,71 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const imageFile = fileInputRef.current?.files?.[0];
-
       // Only require image for new models
-      if (!initialData && !imageFile) {
+      if (!initialData?.id && !selectedFile) {
         toast.error('Please upload a profile image');
         return;
       }
-
+      
       // Prepare form data
-      await onSubmit({
+      const modelData = {
         ...values,
         languages: values.languages.split(',').map(lang => lang.trim()),
         categories: selectedCategories,
         characteristics: characteristics.reduce((acc, { key, value }) => {
-          if (key && value) acc[key] = value;
+          if (key.trim() && value.trim()) {
+            acc[key.trim()] = value.trim();
+          }
           return acc;
         }, {} as Record<string, string>),
-        ...(imageFile && { imageFile }),
-        ...(initialData?.profileImage && !imageFile && { profileImage: initialData.profileImage }),
-        ...(initialData && { id: initialData.id }),
-      });
+        imageFile: selectedFile || undefined,
+        ...(initialData?.profileImage && !selectedFile && { profileImage: initialData.profileImage }),
+        ...(initialData?.id && { id: initialData.id })
+      };
+
+      console.log('Submitting model data:', modelData);
+      await onSubmit(modelData);
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error('Failed to save model profile');
+      const message = error instanceof Error ? error.message : 'Failed to save model profile';
+      toast.error(message);
     }
+  };
+
+  const handleFillDebugData = () => {
+    form.reset({
+      firstName: 'Anna',
+      lastName: 'Smith',
+      nickname: 'anna_smith',
+      quote: 'Living life to the fullest and enjoying every moment',
+      height: 170,
+      weight: 55,
+      prompt: 'You are a friendly and outgoing person who loves to travel and meet new people. You have a great sense of humor and always try to see the positive side of things.',
+      languages: 'English, Spanish, French',
+      chatLink: 'https://t.me/anna_smith',
+      instagramLink: 'https://instagram.com/anna_smith',
+      otherSocialLink: 'https://twitter.com/anna_smith',
+      price: 50,
+      price_photo: 100,
+      isActive: true,
+    });
+
+    setCharacteristics([
+      { key: 'Eye Color', value: 'Blue' },
+      { key: 'Hair Color', value: 'Blonde' },
+      { key: 'Zodiac Sign', value: 'Leo' },
+    ]);
+
+    if (categories.length > 0) {
+      const randomCategories = categories
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(c => c.id);
+      setSelectedCategories(randomCategories);
+      form.setValue('categories', randomCategories);
+    }
+
+    toast.success('Debug data filled');
   };
 
   return (
@@ -180,38 +208,10 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
         autoFocus={false}
       >
         <div className="space-y-6 p-6">
-          <div className="flex flex-col items-center gap-4">
-            <div 
-              className="relative w-32 h-32 sm:w-40 sm:h-40 group cursor-pointer" 
-              onClick={handleUploadClick}
-            >
-              {previewImage ? (
-                <img
-                  key={previewImage}
-                  src={previewImage}
-                  alt="Preview"
-                  className="w-full h-full object-cover rounded-full ring-2 ring-muted transition-all group-hover:ring-primary"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center border-2 border-dashed rounded-full bg-muted/5 transition-all group-hover:border-primary/50 group-hover:bg-muted/10">
-                  <Upload className="h-8 w-8 text-muted-foreground transition-all group-hover:text-primary" />
-                </div>
-              )}
-              <Input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
-              />
-              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Upload className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Click to upload profile photo (max 5MB)
-            </p>
-          </div>
+          <ProfileImage
+            previewImage={previewImage}
+            onImageChange={handleImageChange}
+          />
 
           <BasicInfo form={form} />
           <Status form={form} />
@@ -230,7 +230,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
           <Pricing form={form} />
         </div>
 
-        <div className="p-6 border-t">
+        <div className="p-6 border-t space-y-4">
           <Button 
             type="submit" 
             className="w-full" 
@@ -238,6 +238,16 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
           >
             {isSubmitting ? 'Saving...' : initialData ? 'Update Model Profile' : 'Create Model Profile'}
           </Button>
+          {showDebug && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleFillDebugData}
+            >
+              Fill Debug Data
+            </Button>
+          )}
         </div>
       </form>
     </Form>
