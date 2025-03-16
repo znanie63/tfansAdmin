@@ -79,6 +79,34 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
   const form = useForm<FormValues>({
     mode: 'onChange',
     rules: {
+      firstName: {
+        required: 'First name is required'
+      },
+      lastName: {
+        required: 'Last name is required'
+      },
+      nickname: {
+        required: 'Nickname is required'
+      },
+      chatLink: {
+        required: 'Chat link is required',
+        pattern: {
+          value: /^https?:\/\/.+/,
+          message: 'Please enter a valid URL starting with http:// or https://'
+        }
+      },
+      instagramLink: {
+        pattern: {
+          value: /^https?:\/\/.+/,
+          message: 'Please enter a valid URL starting with http:// or https://'
+        }
+      },
+      otherSocialLink: {
+        pattern: {
+          value: /^https?:\/\/.+/,
+          message: 'Please enter a valid URL starting with http:// or https://'
+        }
+      },
       quote: {
         required: 'Quote is required',
         minLength: {
@@ -117,7 +145,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       otherSocialLink: initialData?.otherSocialLink || '',
       price: initialData?.price || 50,
       price_photo: initialData?.price_photo || 50,
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive ?? false,
       categories: initialData?.categories?.map(c => c.id) || [],
     },
   });
@@ -150,6 +178,43 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
   const handleSubmit = async (values: FormValues) => {
     try {
       // Validate required fields
+      if (!values.firstName?.trim()) {
+        form.setError('firstName', { message: 'First name is required' });
+        return;
+      }
+
+      if (!values.lastName?.trim()) {
+        form.setError('lastName', { message: 'Last name is required' });
+        return;
+      }
+
+      if (!values.nickname?.trim()) {
+        form.setError('nickname', { message: 'Nickname is required' });
+        return;
+      }
+
+      const urlPattern = /^https?:\/\/.+/;
+      
+      if (!values.chatLink?.trim()) {
+        form.setError('chatLink', { message: 'Chat link is required' });
+        return;
+      }
+
+      if (!urlPattern.test(values.chatLink)) {
+        form.setError('chatLink', { message: 'Please enter a valid URL starting with http:// or https://' });
+        return;
+      }
+
+      if (values.instagramLink?.trim() && !urlPattern.test(values.instagramLink)) {
+        form.setError('instagramLink', { message: 'Please enter a valid URL starting with http:// or https://' });
+        return;
+      }
+
+      if (values.otherSocialLink?.trim() && !urlPattern.test(values.otherSocialLink)) {
+        form.setError('otherSocialLink', { message: 'Please enter a valid URL starting with http:// or https://' });
+        return;
+      }
+
       if (!values.quote?.trim()) {
         form.setError('quote', { message: 'Quote is required' });
         return;
@@ -166,9 +231,18 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
         return;
       }
       
+      // Clean up URLs by ensuring they start with http:// or https://
+      const cleanUrl = (url: string) => {
+        if (!url?.trim()) return '';
+        return url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
+      };
+
       // Prepare form data
       const modelData = {
         ...values,
+        chatLink: cleanUrl(values.chatLink),
+        instagramLink: cleanUrl(values.instagramLink),
+        otherSocialLink: cleanUrl(values.otherSocialLink),
         languages: values.languages.split(',').map(lang => lang.trim()),
         categories: selectedCategories,
         characteristics: characteristics.reduce((acc, { key, value }) => {

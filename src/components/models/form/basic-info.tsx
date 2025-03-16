@@ -57,6 +57,20 @@ export function BasicInfo({ form }: BasicInfoProps) {
 
       <FormField
         control={form.control}
+        name="languages"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Languages</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Enter languages separated by commas (e.g. English, Spanish)" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
         name="quote"
         render={({ field }) => (
           <FormItem>
