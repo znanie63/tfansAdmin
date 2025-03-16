@@ -187,14 +187,13 @@ export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
       ? model.categories 
       : model.categories?.map(c => c.id) || [];
     
-    const modelData = { ...model };
-    delete modelData.categories; // Remove categories from model data
+    delete model.categories; // Remove categories from model data
 
     // Upload image first if provided
     let profileImageUrl = '';
-    if (modelData.imageFile) {
+    if (model.imageFile) {
       try {
-        profileImageUrl = await uploadModelImage(modelData.imageFile);
+        profileImageUrl = await uploadModelImage(model.imageFile);
         console.log('Image uploaded successfully:', profileImageUrl);
       } catch (error) {
         console.error('Image upload error:', error);
@@ -202,12 +201,17 @@ export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
       }
     }
 
+    const modelData = {
+      ...model,
+      profileImage: profileImageUrl // Set the profile image URL
+    };
+
     const dbRecord = transformModelToDB({
-      ...modelData,
-      profileImage: profileImageUrl
+      ...modelData
     });
 
     console.log('Creating model with data:', dbRecord);
+
     const { data, error } = await supabase
       .from('models')
       .insert(dbRecord)
@@ -229,11 +233,11 @@ export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
     try {
       if (categoryIds.length > 0) {
         await assignCategories(data.id, categoryIds);
-        console.log('Categories assigned successfully');
+        console.log('Categories assigned successfully:', categoryIds);
       }
     } catch (error) {
       console.error('Error assigning categories:', error);
-      // Continue even if category assignment fails
+      throw new Error('Failed to assign categories');
     }
 
     return transformModelFromDB(data as ModelRecord);
@@ -406,8 +410,8 @@ export async function getModel(id: string): Promise<Model> {
     .from('models')
     .select(`
       *,
-      categories: model_category_assignments (
-        category: model_categories (
+      categories:model_category_assignments(
+        category:model_categories(
           id,
           name,
           created_at,
@@ -426,14 +430,8 @@ export async function getModel(id: string): Promise<Model> {
   if (!data) {
     throw new Error('Model not found');
   }
-
-  // Transform categories from nested structure
-  const transformedData = {
-    ...data,
-    categories: data.categories?.map(assignment => assignment.category) || []
-  };
   
-  return transformModelFromDB(transformedData as ModelRecord);
+  return transformModelFromDB(data as ModelRecord);
 }
 
 export async function getModelPhotos(modelId: string): Promise<ModelPhoto[]> {

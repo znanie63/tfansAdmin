@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import * as z from 'zod';
 import { Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,32 +20,28 @@ import { SocialLinks } from './form/social-links';
 import { Pricing } from './form/pricing';
 import { Model } from '@/types';
 
-const formSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  nickname: z.string().min(2, 'Nickname must be at least 2 characters'),
-  quote: z.string().min(10, 'Quote must be at least 10 characters'),
-  height: z.number().min(140).max(220),
-  weight: z.number().min(40).max(150),
-  prompt: z.string()
-    .min(10, 'Prompt must be at least 10 characters'),
-  languages: z.string().min(2, 'Please enter at least one language'),
-  characteristics: z.array(z.object({
-    key: z.string().min(1, 'Characteristic name is required'),
-    value: z.string().min(1, 'Value is required')
-  })).optional(),
-  chatLink: z.string().url('Please enter a valid URL'),
-  instagramLink: z.string().url('Please enter a valid URL').optional(),
-  otherSocialLink: z.string().url('Please enter a valid URL').optional(),
-  price: z.number().min(1, 'Price must be at least 1 TFC'),
-  price_photo: z.number().min(1, 'Photo price must be at least 1 TFC'),
-  isActive: z.boolean(),
-  categories: z.array(z.string()).optional(),
-});
+interface FormValues {
+  firstName: string;
+  lastName: string;
+  nickname: string;
+  quote: string;
+  height: number;
+  weight: number;
+  prompt: string;
+  languages: string;
+  characteristics?: Array<{ key: string; value: string }>;
+  chatLink: string;
+  instagramLink?: string;
+  otherSocialLink?: string;
+  price: number;
+  price_photo: number;
+  isActive: boolean;
+  categories?: string[];
+}
 
 interface ModelFormProps {
   initialData?: Model;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: FormValues) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -67,7 +61,6 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
 
   useEffect(() => {
     loadCategories();
-    // Initialize selected categories from initialData
     if (initialData?.categories) {
       setSelectedCategories(initialData.categories.map(c => c.id));
     }
@@ -83,8 +76,32 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
     }
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<FormValues>({
+    mode: 'onChange',
+    rules: {
+      quote: {
+        required: 'Quote is required',
+        minLength: {
+          value: 5,
+          message: 'Quote must be at least 5 characters'
+        },
+        maxLength: {
+          value: 150,
+          message: 'Quote must not exceed 150 characters'
+        }
+      },
+      prompt: {
+        required: 'Personality prompt is required',
+        minLength: {
+          value: 50,
+          message: 'Personality prompt must be at least 50 characters'
+        },
+        maxLength: {
+          value: 100000,
+          message: 'Personality prompt must not exceed 100000 characters'
+        }
+      }
+    },
     defaultValues: {
       firstName: initialData?.firstName || '',
       lastName: initialData?.lastName || '',
@@ -130,8 +147,19 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
     setCharacteristics(newCharacteristics);
   };
 
-  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = async (values: FormValues) => {
     try {
+      // Validate required fields
+      if (!values.quote?.trim()) {
+        form.setError('quote', { message: 'Quote is required' });
+        return;
+      }
+
+      if (!values.prompt?.trim()) {
+        form.setError('prompt', { message: 'Personality prompt is required' });
+        return;
+      }
+
       // Only require image for new models
       if (!initialData?.id && !selectedFile) {
         toast.error('Please upload a profile image');
@@ -204,7 +232,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       <form 
         key={initialData?.id || 'new-form'}
         onSubmit={form.handleSubmit(handleSubmit)} 
-        className="space-y-8" 
+        className="space-y-8"
         autoFocus={false}
       >
         <div className="space-y-6 p-6">
