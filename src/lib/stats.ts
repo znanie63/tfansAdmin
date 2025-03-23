@@ -7,6 +7,11 @@ interface UserStats {
   totalSpent: number;
 }
 
+export interface RegistrationStats {
+  date: string;
+  count: number;
+}
+
 export interface StatChange {
   current: number;
   previous: number;
@@ -109,6 +114,23 @@ export async function getTaskCompletionStats(): Promise<TaskCompletionStats[]> {
 
   return stats.filter((s): s is TaskCompletionStats => s !== null);
 }
+export async function getRegistrationStats(): Promise<RegistrationStats[]> {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_user_registration_stats', { days_back: 30 });
+
+    if (error) throw error;
+
+    return data.map((stat: any) => ({
+      date: stat.date,
+      count: stat.count
+    }));
+  } catch (error) {
+    console.error('Error getting registration stats:', error);
+    return [];
+  }
+}
+
 async function getCountForPeriod(table: string, startDate: Date, endDate: Date, options: { status?: string } = {}) {
   const query = supabase
     .from(table)

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Model } from '@/types';
+import { Model, Category } from '@/types';
 import { StatusFilter } from './components/status-filter';
+import { CategoryFilter } from './components/category-filter';
 import { getModels, createModel, updateModel, deleteModel, uploadModelImage } from '@/lib/models';
+import { getCategories } from '@/lib/categories';
 import { Header } from './components/header';
 import { Search } from './components/search';
 import { EmptyState } from './components/empty-state';
@@ -12,6 +14,9 @@ import { EditDialog } from './components/edit-dialog';
 export function Models() {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showUncategorized, setShowUncategorized] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,9 +30,13 @@ export function Models() {
       try {
         setError(null);
         setLoading(true);
-        const data = await getModels();
+        const [data, categoriesData] = await Promise.all([
+          getModels(),
+          getCategories()
+        ]);
         console.log('Fetched models:', data); // Debug log
         setModels(data);
+        setCategories(categoriesData);
       } catch (error: any) {
         console.error('Error loading models:', error);
         setError(error.message || 'Failed to load models');
@@ -115,6 +124,14 @@ export function Models() {
     }
   };
 
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
   const filteredModels = models.filter(model => 
     (search.trim() ? 
       `${model.firstName} ${model.lastName}`.toLowerCase().includes(search.toLowerCase())
@@ -123,7 +140,13 @@ export function Models() {
       true : 
       selectedStatus === 'active' ? 
         model.isActive : 
-        !model.isActive)
+        !model.isActive) &&
+    (showUncategorized ? 
+      !model.categories?.length :
+      selectedCategories.length === 0 ||
+        selectedCategories.some(catId =>
+          model.categories?.some(cat => cat.id === catId)
+        ))
   );
 
   if (loading) {
@@ -154,10 +177,25 @@ export function Models() {
           value={search} 
           onChange={setSearch} 
         />
-        <StatusFilter
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
-        />
+        <div className="space-y-6">
+            <StatusFilter
+              selectedStatus={selectedStatus}
+              onStatusChange={setSelectedStatus}
+            />
+          
+          <div className="pt-2 border-t">
+            <CategoryFilter
+              categories={categories}
+              selectedCategories={selectedCategories}
+              showUncategorized={showUncategorized}
+              onCategoryChange={handleCategoryChange}
+              onUncategorizedChange={() => {
+                setShowUncategorized(!showUncategorized);
+                setSelectedCategories([]);
+              }}
+            />
+          </div>
+        </div>
       </div>
       
       {filteredModels.length === 0 ? (

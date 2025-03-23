@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { ChatList } from './components/chat-list';
 import { ChatView } from './components/chat-view';
-import { getChats, getChatMessages, sendMessage, uploadChatImage } from '@/lib/chats';
+import { getChats, getChatMessages, sendMessage, uploadChatImage, deleteChat } from '@/lib/chats';
 import { Chat, Message } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -103,6 +103,19 @@ export function Chats() {
     setSelectedChatId(null);
     setSelectedChatMessages([]);
   };
+  
+  const handleDeleteChat = async (chatId: string) => {
+    try {
+      await deleteChat(chatId);
+      setChats(prev => prev.filter(chat => chat.id !== chatId));
+      setSelectedChatId(null);
+      setSelectedChatMessages([]);
+      toast.success('Chat deleted successfully');
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      toast.error('Failed to delete chat');
+    }
+  };
 
   if (loading) {
     return (
@@ -144,8 +157,11 @@ export function Chats() {
             <ChatView 
               chat={selectedChat}
               loading={loadingMessages}
+              onDelete={handleDeleteChat}
               onMessageSent={loadChats}
-              onBack={isMobileView ? handleBackToList : undefined} />
+              onDelete={handleDeleteChat}
+              onBack={isMobileView ? handleBackToList : undefined}
+            />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <MessageSquare className="h-12 w-12 text-muted-foreground/50" />

@@ -16,6 +16,7 @@ import { Reviews } from '@/pages/reviews';
 import { Stories } from '@/pages/stories';
 import { Users } from '@/pages/users';
 import { PhotoRequests } from '@/pages/photo-requests';
+import { Payments } from '@/pages/payments';
 
 function App() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
                 <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                 <Route path="/photo-requests" element={<ProtectedRoute><PhotoRequests /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               </Routes>

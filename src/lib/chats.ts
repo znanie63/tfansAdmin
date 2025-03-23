@@ -3,6 +3,18 @@ import { Chat, Message } from '@/types';
 import { transformChatFromDB, transformMessageFromDB } from './transformers';
 import type { ChatRecord, MessageRecord } from './transformers';
 
+export async function deleteChat(chatId: string): Promise<void> {
+  const { error } = await supabase
+    .from('chats')
+    .delete()
+    .eq('id', chatId);
+
+  if (error) {
+    console.error('Error deleting chat:', error);
+    throw new Error('Failed to delete chat');
+  }
+}
+
 export async function getChats(page: number = 1, limit: number = 20): Promise<{
   chats: Omit<Chat, 'messages'>[],
   hasMore: boolean

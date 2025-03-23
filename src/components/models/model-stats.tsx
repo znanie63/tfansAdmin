@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, ImageIcon, Coins, TrendingUp } from 'lucide-react';
+import { MessageSquare, ImageIcon, Coins, TrendingUp, BarChart2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface ModelStats {
   totalChats: number;
@@ -25,64 +26,25 @@ export function ModelStats({ modelId }: ModelStatsProps) {
     averageMessages: 0,
     averagePhotos: 0
   });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadStats();
-  }, [modelId]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const loadStats = async () => {
     try {
       setLoading(true);
-
-      // Get total chats
-      const { count: chatsCount } = await supabase
-        .from('chats')
-        .select('*', { count: 'exact', head: true })
-        .eq('model_id', modelId)
-        .throwOnError();
-
-      // Get total photos sent
-      const { data: chats } = await supabase
-        .from('chats')
-        .select('id')
-        .eq('model_id', modelId)
-        .throwOnError();
-
-      const chatIds = chats?.map(chat => chat.id) || [];
+      const { data, error } = await supabase
+        .rpc('get_model_chat_stats', { model_id_param: modelId });
       
-      let photosCount = 0;
-      let messagesCount = 0;
-      if (chatIds.length > 0) {
-        const { data: messages } = await supabase
-          .from('messages')
-          .select('message_type')
-          .eq('is_from_user', false)
-          .in('chat_id', chatIds)
-          .throwOnError();
-        
-        photosCount = messages?.filter(m => m.message_type === 'image').length || 0;
-        messagesCount = messages?.filter(m => m.message_type === 'text').length || 0;
-      }
-
-      // Get total tokens spent
-      const { data: transactions, error: txError } = await supabase
-        .from('balance')
-        .select('amount')
-        .eq('type', 'token_deduction')
-        .in('chat_id', chatIds);
-
-      if (txError) throw txError;
-
-      const totalSpent = transactions?.reduce((sum, tx) => sum + Math.abs(tx.amount), 0) || 0;
+      if (error) throw error;
 
       setStats({
-        totalChats: chatsCount || 0,
-        totalPhotos: photosCount || 0,
-        totalSpent: totalSpent,
-        averageMessages: chatIds.length ? Number((messagesCount / chatIds.length).toFixed(1)) : 0,
-        averagePhotos: chatIds.length ? Number((photosCount / chatIds.length).toFixed(1)) : 0
+        totalChats: data.total_chats,
+        totalPhotos: data.total_photos,
+        totalSpent: data.total_spent,
+        averageMessages: data.average_messages,
+        averagePhotos: data.average_photos
       });
+      setLoaded(true);
     } catch (error) {
       console.error('Error loading model stats:', error);
       toast.error('Failed to load model stats');
@@ -91,7 +53,27 @@ export function ModelStats({ modelId }: ModelStatsProps) {
     }
   };
 
-  if (loading) {
+  if (!loaded && !loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-6 flex flex-col items-center justify-center text-center min-h-[120px]">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={loadStats}
+              disabled={loading}
+            >
+              <BarChart2 className="h-4 w-4 mr-2" />
+              Load Statistics
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading && !loaded) {
     return (
       <div className="grid gap-4 sm:grid-cols-3">
         {[...Array(3)].map((_, i) => (

@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Image } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; 
+import { MessageSquare, Image, Coins } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
+interface DashboardStats {
+  totalChats: number;
+  totalMessages: number;
+  totalPhotos: number;
+  totalSpent: number;
+  averageMessages: number;
+  averagePhotos: number;
+}
 
 interface ModelStats {
   date: string;
@@ -22,6 +31,7 @@ interface ModelChartProps {
 export function ModelChart({ modelId }: ModelChartProps) {
   const [models, setModels] = useState<{ id: string; name: string }[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(modelId || null);
+  const [modelStats, setModelStats] = useState<DashboardStats | null>(null);
   const [data, setData] = useState<ModelStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [averages, setAverages] = useState<{ messagesPerChat: number; photosPerChat: number }>({
@@ -61,110 +71,41 @@ export function ModelChart({ modelId }: ModelChartProps) {
   const loadStats = async (modelId: string) => {
     try {
       setLoading(true);
+      // Get model stats
+      const { data: modelStats, error: statsError } = await supabase
+        .rpc('get_model_chat_stats', { model_id_param: modelId });
 
-      // Get chats for this model
-      const { data: chats } = await supabase
-        .from('chats')
-        .select('id')
-        .eq('model_id', modelId);
+      if (statsError) throw statsError;
 
-      if (!chats?.length) {
-        setData([]);
-        return;
-      }
+      // Set model stats
+      setModelStats({
+        totalChats: modelStats.total_chats,
+        totalMessages: modelStats.total_messages,
+        totalPhotos: modelStats.total_photos,
+        totalSpent: modelStats.total_spent,
+        averageMessages: modelStats.average_messages,
+        averagePhotos: modelStats.average_photos
+      });
 
-      const chatIds = chats.map(c => c.id);
-
-      // Get messages and photos for last 7 days
-      const { data: totalMessages, error: totalMsgError } = await supabase
-        .from('messages')
-        .select('message_type')
-        .in('chat_id', chatIds);
-
-      if (totalMsgError) throw totalMsgError;
-
-      // Calculate averages
-      const totalPhotos = totalMessages.filter(m => m.message_type === 'image').length;
-      const totalTextMessages = totalMessages.filter(m => m.message_type === 'text').length;
+      // Get daily stats
+      const { data: dailyStats, error: dailyError } = await supabase
+        .rpc('get_model_daily_stats', { model_id_param: modelId });
       
+      if (dailyError) throw dailyError;
+      
+      // Update averages
       setAverages({
-        messagesPerChat: Number((totalTextMessages / chats.length).toFixed(1)),
-        photosPerChat: Number((totalPhotos / chats.length).toFixed(1))
+        messagesPerChat: modelStats.average_messages,
+        photosPerChat: modelStats.average_photos
       });
-
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 7);
-
-      const { data: allMessages, error: msgError } = await supabase
-        .from('messages')
-        .select('created_at, message_type')
-        .in('chat_id', chatIds)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at');
-
-      if (msgError) throw msgError;
-
-      // Get unique chats per day
-      const { data: chatData, error: chatError } = await supabase
-        .from('chats')
-        .select('created_at')
-        .eq('model_id', modelId)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at');
-
-      if (chatError) throw chatError;
-
-      // Group by date
-      const stats = allMessages.reduce((acc: Record<string, ModelStats>, msg) => {
-        const date = format(new Date(msg.created_at), 'yyyy-MM-dd');
-        
-        if (!acc[date]) {
-          acc[date] = {
-            date,
-            chats: 0,
-            photos: 0,
-            messages: 0
-          };
-        }
-
-        if (msg.message_type === 'image') {
-          acc[date].photos++;
-        } else {
-          acc[date].messages++;
-        }
-
-        return acc;
-      }, {});
-
-      // Add chat counts
-      chatData.forEach(chat => {
-        const date = format(new Date(chat.created_at), 'yyyy-MM-dd');
-        if (stats[date]) {
-          stats[date].chats++;
-        } else {
-          stats[date] = {
-            date,
-            chats: 1,
-            photos: 0,
-            messages: 0
-          };
-        }
-      });
-
-      // Fill in missing dates
-      const data: ModelStats[] = [];
-      const endDate = new Date();
-      for (let i = 7; i >= 0; i--) {
-        const date = format(new Date(endDate.getTime() - (i * 24 * 60 * 60 * 1000)), 'yyyy-MM-dd');
-        data.push(stats[date] || { 
-          date, 
-          chats: 0,
-          photos: 0, 
-          messages: 0 
-        });
-      }
-
-      setData(data);
+      
+      // Transform daily stats for chart
+      setData(dailyStats.map(day => ({
+        date: format(new Date(day.date), 'yyyy-MM-dd'),
+        chats: day.chats,
+        messages: day.messages,
+        photos: day.photos
+      })));
     } catch (error) {
       console.error('Error loading stats:', error);
       toast.error('Failed to load statistics');
@@ -186,37 +127,57 @@ export function ModelChart({ modelId }: ModelChartProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <CardTitle className="text-base font-normal">
-              Model Activity
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 whitespace-nowrap">
-                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                {averages.messagesPerChat} msgs/chat
-              </Badge>
-              <Badge variant="secondary" className="bg-green-500/10 text-green-500 whitespace-nowrap">
-                <Image className="h-3.5 w-3.5 mr-1.5" />
-                {averages.photosPerChat} photos/chat
-              </Badge>
+        <div className="space-y-4 w-full">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <CardTitle className="text-base font-normal">
+                Model Activity
+              </CardTitle>
             </div>
+            <Select
+              value={selectedModel || undefined}
+              onValueChange={setSelectedModel}
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map(model => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={selectedModel || undefined}
-            onValueChange={setSelectedModel}
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Select model" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map(model => (
-                <SelectItem key={model.id} value={model.id}>
-                  {model.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {modelStats && selectedModel && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-primary/10 text-primary whitespace-nowrap">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                  {modelStats.totalChats} chats
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 whitespace-nowrap">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                  {modelStats.averageMessages} msgs/chat
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-green-500/10 text-green-500 whitespace-nowrap">
+                  <Image className="h-3.5 w-3.5 mr-1.5" />
+                  {modelStats.averagePhotos} photos/chat
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 whitespace-nowrap">
+                  <Coins className="h-3.5 w-3.5 mr-1.5" />
+                  {modelStats.totalSpent} TFC
+                </Badge>
+              </div>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>

@@ -5,6 +5,7 @@ import {
   Target,
   MessageSquare,
   Image,
+  CreditCard,
   Settings,
   Star
 } from 'lucide-react';
@@ -40,6 +41,11 @@ export const menuItems = [
     title: 'Photo Requests',
     icon: Image,
     href: '/photo-requests'
+  },
+  {
+    title: 'Payments',
+    icon: CreditCard,
+    href: '/payments'
   },
   {
     title: 'Users',

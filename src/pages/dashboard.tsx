@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getDashboardStats, DashboardStats, getUserStats } from '@/lib/stats';
+import { getDashboardStats, DashboardStats, getUserStats, getRegistrationStats } from '@/lib/stats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,10 +9,12 @@ import {
   Star,
   Users as UsersIcon,
   Coins,
-  TrendingDown
+  TrendingDown,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ModelChart } from '@/components/stats/model-chart';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -21,12 +23,22 @@ export function Dashboard() {
     totalBalance: 0,
     totalSpent: 0
   });
+  const [registrationStats, setRegistrationStats] = useState<{ date: string; count: number; }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([loadStats(), loadUserStats()]);
+    Promise.all([loadStats(), loadUserStats(), loadRegistrationStats()]);
   }, []);
+
+  const loadRegistrationStats = async () => {
+    try {
+      const data = await getRegistrationStats();
+      setRegistrationStats(data);
+    } catch (error) {
+      console.error('Error loading registration stats:', error);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -165,6 +177,71 @@ export function Dashboard() {
       </div>
 
       <div className="h-px bg-border my-8" />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg font-medium">
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            User Registrations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={registrationStats}>
+                <defs>
+                  <linearGradient id="registrationGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                  className="text-xs fill-muted-foreground"
+                />
+                <YAxis className="text-xs fill-muted-foreground" />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload) return null;
+                    return (
+                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {new Date(label).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="grid gap-1">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            <span className="text-xs font-medium">
+                              {payload[0]?.value} registrations
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="hsl(var(--primary))"
+                  fill="url(#registrationGradient)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
       
       <ModelChart />
       

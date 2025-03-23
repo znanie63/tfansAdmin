@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Database, MessageSquare, Sparkles, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Categories } from './components/categories';
+import { PricingSettings } from './components/pricing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -104,13 +106,15 @@ export function Settings() {
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <Categories />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-6">
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -329,7 +333,25 @@ export function Settings() {
             </div>
           </CardContent>
         </Card>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <Card>
+            <CardContent className="p-6">
+              <Categories />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pricing">
+          <Card>
+            <CardContent className="p-6">
+              <PricingSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
