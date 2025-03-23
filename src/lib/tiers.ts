@@ -109,7 +109,7 @@ async function generateInvoiceLink(tier: Tier): Promise<string> {
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('https://bspffffstxngyydorhis.supabase.co/functions/v1/payments/create', {
+  const response = await fetch(import.meta.env.VITE_PAYMENT_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
