@@ -50,7 +50,7 @@ export async function deleteModelVideo(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) {
-    console.error('Delete error:', error);
+    console.error('Error deleting video:', error);
     throw new Error('Failed to delete model video');
   }
 }
@@ -63,7 +63,7 @@ export async function getModelVideos(modelId: string): Promise<ModelVideo[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Fetch error:', error);
+    console.error('Error fetching videos:', error);
     throw new Error('Failed to fetch model videos');
   }
 
