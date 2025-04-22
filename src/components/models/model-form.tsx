@@ -1,12 +1,18 @@
 import { useState, useRef } from 'react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
   FormMessage,
 } from '@/components/ui/form';
 import { getCategories, Category } from '@/lib/categories';
@@ -15,6 +21,7 @@ import { BasicInfo } from './form/basic-info';
 import { Status } from './form/status';
 import { Personality } from './form/personality';
 import { CategoriesSection } from './form/categories-section';
+import { VoiceSettings } from './form/voice-settings';
 import { Characteristics } from './form/characteristics';
 import { SocialLinks } from './form/social-links';
 import { Pricing } from './form/pricing';
@@ -35,17 +42,28 @@ interface FormValues {
   otherSocialLink?: string;
   price: number;
   price_photo: number;
+  send_voice_chance: number;
   isActive: boolean;
   categories?: string[];
+  voice?: {
+    id?: string;
+    speed: number;
+    style: number;
+    stability: number;
+    similarityBoost: number;
+    useSpeakerBoost: boolean;
+    elevenlabsVoiceId: string;
+  };
 }
 
 interface ModelFormProps {
   initialData?: Model;
   onSubmit: (data: FormValues) => Promise<void>;
   isSubmitting?: boolean;
+  className?: string;
 }
 
-export function ModelForm({ initialData, onSubmit, isSubmitting = false }: ModelFormProps) {
+export function ModelForm({ initialData, onSubmit, isSubmitting = false, className }: ModelFormProps) {
   const [previewImage, setPreviewImage] = useState<string>(
     initialData?.profileImage || ''
   );
@@ -145,8 +163,19 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       otherSocialLink: initialData?.otherSocialLink || '',
       price: initialData?.price || 50,
       price_photo: initialData?.price_photo || 50,
+      price_voice: initialData?.price_voice || 50,
+      price_video: initialData?.price_video || 50,
+      send_voice_chance: initialData?.send_voice_chance || 50,
       isActive: initialData?.isActive ?? false,
       categories: initialData?.categories?.map(c => c.id) || [],
+      voice: {
+        speed: 1,
+        style: 0,
+        stability: 0,
+        similarityBoost: 0,
+        useSpeakerBoost: true,
+        elevenlabsVoiceId: ''
+      }
     },
   });
 
@@ -253,7 +282,8 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
         }, {} as Record<string, string>),
         imageFile: selectedFile || undefined,
         ...(initialData?.profileImage && !selectedFile && { profileImage: initialData.profileImage }),
-        ...(initialData?.id && { id: initialData.id })
+        ...(initialData?.id && { id: initialData.id }),
+        voice: values.voice
       };
 
       console.log('Submitting model data:', modelData);
@@ -280,6 +310,8 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       otherSocialLink: 'https://twitter.com/anna_smith',
       price: 50,
       price_photo: 100,
+      price_voice: 75,
+      price_video: 150,
       isActive: true,
     });
 
@@ -306,10 +338,10 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
       <form 
         key={initialData?.id || 'new-form'}
         onSubmit={form.handleSubmit(handleSubmit)} 
-        className="space-y-8"
+        className={cn("space-y-8", className)}
         autoFocus={false}
       >
-        <div className="space-y-6 p-6">
+        <div className="space-y-6">
           <ProfileImage
             previewImage={previewImage}
             onImageChange={handleImageChange}
@@ -324,12 +356,38 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false }: Model
             selectedCategories={selectedCategories}
             setSelectedCategories={setSelectedCategories}
           />
+          <VoiceSettings form={form} modelId={initialData?.id} />
           <Characteristics
             characteristics={characteristics}
             setCharacteristics={setCharacteristics}
           />
           <SocialLinks form={form} />
           <Pricing form={form} />
+        </div>
+
+        <div className="space-y-2">
+          <FormField
+            control={form.control}
+            name="send_voice_chance"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Voice Message Chance (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    {...field}
+                    onChange={e => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Probability of sending voice messages instead of text (0-100)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <div className="p-6 border-t space-y-4">

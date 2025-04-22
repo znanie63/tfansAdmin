@@ -6,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as z from 'zod';
-import { Upload, X, Hash, ImageIcon } from 'lucide-react';
+import { Upload, X, Hash, ImageIcon, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   Form,
   FormControl,
@@ -21,13 +22,13 @@ import { cn } from '@/lib/utils';
 const formSchema = z.object({
   imageFiles: z.array(z.instanceof(File))
     .min(1, 'Please select at least one image')
-    .max(10, 'Maximum 10 photos allowed')
-    .transform(files => files.map(file => ({ file, description: '' }))),
-  descriptions: z.array(z.string())
+    .max(10, 'Maximum 10 photos allowed'),
+  descriptions: z.array(z.string()),
+  isPrivate: z.array(z.boolean())
 });
 
 interface ModelPhotoFormProps {
-  onSubmit: (data: { imageFiles: { file: File; description: string }[] }) => void;
+  onSubmit: (data: { imageFiles: { file: File; description: string; isPrivate: boolean }[] }) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
@@ -37,6 +38,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [descriptions, setDescriptions] = useState<string[]>([]);
+  const [isPrivate, setIsPrivate] = useState<boolean[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,29 +46,50 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
     defaultValues: {
       imageFiles: [],
       descriptions: [],
+      isPrivate: [],
     },
   });
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length > 0) {
-      form.setValue('imageFiles', files);
-      setSelectedFiles(files);
-      setDescriptions(new Array(files.length).fill(''));
-      
-      // Create previews for all files
-      const previews = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-      
-      Promise.all(previews).then(setPreviewImages);
+      handleFiles(files);
     }
+  };
+
+  const handleFiles = (files: File[]) => {
+    // Validate file sizes and types
+    const validFiles = files.filter(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 5MB)`);
+        return false;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    form.setValue('imageFiles', validFiles);
+    setSelectedFiles(validFiles);
+    setDescriptions(new Array(validFiles.length).fill(''));
+    setIsPrivate(new Array(validFiles.length).fill(false));
+    
+    // Create previews for all files
+    const previews = validFiles.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+    
+    Promise.all(previews).then(setPreviewImages);
   };
 
   const handleUploadClick = () => {
@@ -90,22 +113,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
       .filter(file => file.type.startsWith('image/'));
     
     if (files.length > 0) {
-      form.setValue('imageFiles', files);
-      setSelectedFiles(files);
-      setDescriptions(new Array(files.length).fill(''));
-      
-      // Create previews for all files
-      const previews = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-      
-      Promise.all(previews).then(setPreviewImages);
+      handleFiles(files);
     }
   };
 
@@ -120,7 +128,8 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
     onSubmit({
       imageFiles: selectedFiles.map((file, index) => ({
         file,
-        description: descriptions[index] || ''
+        description: descriptions[index] || '',
+        isPrivate: isPrivate[index] || false
       }))
     });
   };
@@ -129,6 +138,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
     setPreviewImages(prev => prev.filter((_, i) => i !== index));
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setDescriptions(prev => prev.filter((_, i) => i !== index));
+    setIsPrivate(prev => prev.filter((_, i) => i !== index));
     form.setValue('imageFiles', selectedFiles.filter((_, i) => i !== index));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -137,7 +147,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto" autoFocus={false}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto w-full" autoFocus={false}>
         <div className="space-y-6">
           <div
             className="relative flex flex-col items-center justify-center w-full rounded-lg transition-all"
@@ -158,8 +168,8 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
                           "transition-all hover:shadow-sm p-4"
                         )}
                       >
-                        <div className="flex gap-4">
-                          <div className="relative aspect-[3/4] w-[200px] rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="relative aspect-[3/4] w-full sm:w-[200px] rounded-lg overflow-hidden flex-shrink-0">
                             <img
                               src={preview}
                               alt={`Preview ${index + 1}`}
@@ -179,6 +189,20 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
                             </Button>
                           </div>
                           <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <Lock className="h-4 w-4 text-muted-foreground" />
+                                <Label className="text-sm font-normal">Private Photo</Label>
+                              </div>
+                              <Switch
+                                checked={isPrivate[index]}
+                                onCheckedChange={(checked) => {
+                                  const newIsPrivate = [...isPrivate];
+                                  newIsPrivate[index] = checked;
+                                  setIsPrivate(newIsPrivate);
+                                }}
+                              />
+                            </div>
                             <div className="flex items-center gap-2 mb-2">
                               <Hash className="h-4 w-4 text-primary" />
                               <Label className="text-sm font-normal">Keywords</Label>
@@ -202,7 +226,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
               </div>
             ) : (
               <div className={cn(
-                "w-full aspect-[4/3] flex flex-col items-center justify-center",
+                "w-full aspect-[3/1] flex flex-col items-center justify-center",
                 "border-2 border-dashed rounded-lg transition-all",
                 isDragging
                   ? "border-primary/50 bg-primary/5 cursor-grab"
@@ -216,7 +240,7 @@ export function ModelPhotoForm({ onSubmit, onCancel, isSubmitting = false }: Mod
                   onChange={handleImageChange}
                   className="hidden"
                 />
-                <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
+                <Upload className="h-6 w-6 mb-1.5 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground text-center px-4 max-w-[280px]">
                   Click or drag and drop to upload photos
                 </p>

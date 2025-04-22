@@ -1,4 +1,4 @@
-import { PhotoRequest, PhotoRequestStatus } from '@/types';
+import { PhotoRequest, PhotoRequestStatus, VideoRequest, VideoRequestStatus } from '@/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
@@ -12,11 +12,12 @@ import {
 import { cn } from '@/lib/utils';
 
 interface RequestCardProps {
-  request: PhotoRequest;
-  onStatusChange: (requestId: string, status: PhotoRequestStatus) => void;
+  request: PhotoRequest | VideoRequest;
+  onStatusChange: (requestId: string, status: PhotoRequestStatus | VideoRequestStatus) => void;
+  type: 'photo' | 'video';
 }
 
-export default function RequestCard({ request, onStatusChange }: RequestCardProps) {
+export default function RequestCard({ request, onStatusChange, type }: RequestCardProps) {
   const getStatusBadge = (status: PhotoRequestStatus) => {
     switch (status) {
       case 'found':
@@ -96,7 +97,7 @@ export default function RequestCard({ request, onStatusChange }: RequestCardProp
         
         {['completed', 'not_found'].includes(request.status) && (
           <div className="text-xs text-muted-foreground italic">
-            {request.status === 'completed' ? 'Request completed' : 'No suitable photos found'}
+            {request.status === 'completed' ? 'Request completed' : `No suitable ${type === 'photo' ? 'photos' : 'videos'} found`}
           </div>
         )}
       </CardContent>

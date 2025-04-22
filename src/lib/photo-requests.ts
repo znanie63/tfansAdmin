@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { PhotoRequest } from '@/types';
+import { PhotoRequest, VideoRequest } from '@/types';
 import { transformChatFromDB } from './transformers';
 
 interface PhotoRequestRecord {
@@ -21,6 +21,30 @@ function transformPhotoRequestFromDB(record: PhotoRequestRecord): PhotoRequest {
     status: record.status as PhotoRequestStatus,
     chance: record.chance,
     photoUrl: record.photo_url || undefined,
+    message: record.message,
+    createdAt: new Date(record.created_at),
+  };
+}
+
+interface VideoRequestRecord {
+  id: string;
+  chat_id: string;
+  user_id: string;
+  status: string;
+  chance: number;
+  video_url: string | null;
+  message: string;
+  created_at: string;
+}
+
+function transformVideoRequestFromDB(record: VideoRequestRecord): VideoRequest {
+  return {
+    id: record.id,
+    chatId: record.chat_id,
+    userId: record.user_id,
+    status: record.status as VideoRequestStatus,
+    chance: record.chance,
+    videoUrl: record.video_url || undefined,
     message: record.message,
     createdAt: new Date(record.created_at),
   };
@@ -78,6 +102,58 @@ export async function getPhotoRequests(
   };
 }
 
+export async function getVideoRequests(
+  page: number = 1,
+  limit: number = 20,
+  includeCompleted: boolean = false
+): Promise<{
+  requests: VideoRequest[],
+  hasMore: boolean
+}> {
+  const { data, error } = await supabase
+    .from('video_requests')
+    .select(`
+      *,
+      chat:chats (
+        models (
+          first_name,
+          last_name,
+          nickname,
+          profile_image_path,
+          chat_link
+        ),
+        users (
+          username,
+          photo_url
+        )
+      )
+    `)
+    .not('status', 'eq', includeCompleted ? null : 'closed')
+    .range((page - 1) * limit, page * limit - 1)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching video requests:', error);
+    throw new Error('Failed to fetch video requests');
+  }
+
+  // Get total count to determine if there are more requests
+  const { count } = await supabase
+    .from('video_requests')
+    .select('*', { count: 'exact', head: true })
+    .not('status', 'eq', includeCompleted ? null : 'closed');
+
+  const transformedRequests = data.map(record => ({
+    ...transformVideoRequestFromDB(record),
+    chat: record.chat ? transformChatFromDB(record.chat) : undefined
+  }));
+
+  return {
+    requests: transformedRequests,
+    hasMore: count ? (page * limit) < count : false
+  };
+}
+
 export async function updatePhotoRequestStatus(
   id: string, 
   status: PhotoRequestStatus
@@ -90,5 +166,20 @@ export async function updatePhotoRequestStatus(
   if (error) {
     console.error('Error updating photo request:', error);
     throw new Error('Failed to update photo request');
+  }
+}
+
+export async function updateVideoRequestStatus(
+  id: string,
+  status: VideoRequestStatus
+): Promise<void> {
+  const { error } = await supabase
+    .from('video_requests')
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating video request:', error);
+    throw new Error('Failed to update video request');
   }
 }

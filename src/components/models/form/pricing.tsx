@@ -1,6 +1,7 @@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { UseFormReturn } from 'react-hook-form';
+import { Volume2, Video } from 'lucide-react';
+import type { UseFormReturn } from 'react-hook-form';
 
 interface PricingProps {
   form: UseFormReturn<any>;
@@ -12,6 +13,7 @@ export function Pricing({ form }: PricingProps) {
       <h3 className="text-lg font-semibold">Pricing Settings</h3>
       
       <div className="grid grid-cols-2 gap-6">
+        {/* Message Price */}
         <FormField
           control={form.control}
           name="price"
@@ -33,6 +35,7 @@ export function Pricing({ form }: PricingProps) {
           )}
         />
 
+        {/* Photo Price */}
         <FormField
           control={form.control}
           name="price_photo"
@@ -48,6 +51,56 @@ export function Pricing({ form }: PricingProps) {
               </FormControl>
               <p className="text-xs text-muted-foreground">
                 Cost per photo request
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Voice Price */}
+        <FormField
+          control={form.control}
+          name="price_voice"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                Voice Price (TFC)
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={e => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Cost per voice message
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Video Price */}
+        <FormField
+          control={form.control}
+          name="price_video"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Video className="h-4 w-4 text-muted-foreground" />
+                Video Price (TFC)
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={e => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Cost per video message
               </p>
               <FormMessage />
             </FormItem>

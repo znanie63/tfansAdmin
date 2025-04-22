@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { ImageIcon, X, Lock, Unlock, Hash, Pencil } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useEffect } from 'react';
+import { Video, X, Lock, Unlock, Hash, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ModelPhoto } from '@/types';
+import { ModelVideo } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -26,64 +24,41 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
-interface ModelPhotosProps {
-  photos: ModelPhoto[];
-  onCreatePhoto: () => void;
-  onTogglePrivate: (photo: ModelPhoto) => void;
-  onUpdateDescription: (photo: ModelPhoto, description: string) => void;
-  onDeletePhoto: (photoId: string) => void;
+interface ModelVideosProps {
+  videos: ModelVideo[];
+  onCreateVideo: () => void;
+  onTogglePrivate: (video: ModelVideo) => void;
+  onUpdateDescription: (video: ModelVideo, description: string) => void;
+  onDeleteVideo: (videoId: string) => void;
 }
 
-export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDescription, onDeletePhoto }: ModelPhotosProps) {
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
-  const [editingPhoto, setEditingPhoto] = useState<ModelPhoto | null>(null);
+export function ModelVideos({ videos, onCreateVideo, onTogglePrivate, onUpdateDescription, onDeleteVideo }: ModelVideosProps) {
+  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
+  const [editingVideo, setEditingVideo] = useState<ModelVideo | null>(null);
   const [editedDescription, setEditedDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const loadSignedUrls = async () => {
-      const privatePhotos = photos.filter(p => p.isPrivate);
-      const urls: Record<string, string> = {};
-      
-      for (const photo of privatePhotos) {
-        const filePath = `model-photos/${photo.image.split('/').pop()}`;
-        const { data } = await supabase.storage
-          .from('private_model_photos')
-          .createSignedUrl(filePath, 3600); // 1 hour expiry
-        
-        if (data?.signedUrl) {
-          urls[photo.id] = data.signedUrl;
-        }
-      }
-      
-      setSignedUrls(urls);
-    };
-    
-    loadSignedUrls();
-  }, [photos]);
-
-  const handleEditDescription = (photo: ModelPhoto) => {
-    setEditingPhoto(photo);
-    setEditedDescription(photo.description);
+  const handleEditDescription = (video: ModelVideo) => {
+    setEditingVideo(video);
+    setEditedDescription(video.description);
   };
 
   const handleSaveDescription = async () => {
-    if (!editingPhoto) return;
+    if (!editingVideo) return;
     
     try {
       setIsSubmitting(true);
-      await onUpdateDescription(editingPhoto, editedDescription);
-      setEditingPhoto(null);
+      await onUpdateDescription(editingVideo, editedDescription);
+      setEditingVideo(null);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleConfirmDelete = () => {
-    if (photoToDelete) {
-      onDeletePhoto(photoToDelete);
-      setPhotoToDelete(null);
+    if (videoToDelete) {
+      onDeleteVideo(videoToDelete);
+      setVideoToDelete(null);
     }
   };
 
@@ -91,34 +66,32 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
     <div className="min-w-0 w-full space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4">
         <div>
-          <h2 className="text-lg font-semibold">Model Photos</h2>
-          <p className="text-sm text-muted-foreground">Manage model's photo gallery</p>
+          <h2 className="text-lg font-semibold">Model Videos</h2>
+          <p className="text-sm text-muted-foreground">Manage model's video gallery</p>
         </div>
-        <Button onClick={onCreatePhoto} size="default" className="w-full sm:w-auto">
-          <ImageIcon className="h-4 w-4 mr-2" />
-          <span className="whitespace-nowrap">Add Photo</span>
+        <Button onClick={onCreateVideo} size="default" className="w-full sm:w-auto">
+          <Video className="h-4 w-4 mr-2" />
+          <span className="whitespace-nowrap">Add Video</span>
         </Button>
       </div>
 
       <div className="min-w-0 w-full">
         <div className={cn(
           "min-w-0 w-full",
-          photos.length > 0 && "grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+          videos.length > 0 && "grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
         )}>
-          {photos.length > 0 ? (
-            photos.map((photo) => (
+          {videos.length > 0 ? (
+            videos.map((video) => (
               <Card 
-                key={photo.id}
+                key={video.id}
                 className="group hover:shadow-lg transition-all"
               >
                 <CardContent className="p-6 space-y-4">
-                  <div className="aspect-[4/3] rounded-lg bg-muted overflow-hidden relative">
-                    <img
-                      src={photo.isPrivate ? 
-                        signedUrls[photo.id] :
-                        photo.image}
-                      alt={photo.description || "Model photo"}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  <div className="aspect-[9/16] rounded-lg bg-muted overflow-hidden relative">
+                    <video
+                      src={video.video}
+                      className="w-full h-full object-cover"
+                      controls
                     />
                   </div>
                   <div className="space-y-2">
@@ -126,19 +99,19 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
                       <Badge 
                         variant="secondary" 
                         className={cn(
-                          photo.isPrivate 
+                          video.isPrivate 
                             ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                             : "bg-green-500/10 text-green-500 hover:bg-green-500/20"
                         )}
                       >
-                        {photo.isPrivate ? 'Private' : 'Public'}
+                        {video.isPrivate ? 'Private' : 'Public'}
                       </Badge>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="text-muted-foreground hover:text-foreground"
-                          onClick={() => handleEditDescription(photo)}
+                          onClick={() => handleEditDescription(video)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -146,17 +119,17 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => setPhotoToDelete(photo.id)}
+                          onClick={() => setVideoToDelete(video.id)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                    {photo.description && (
+                    {video.description && (
                       <div className="flex items-start gap-1.5 mt-2">
                         <Hash className="h-3.5 w-3.5 text-primary mt-1" />
                         <p className="text-xs text-muted-foreground line-clamp-2">
-                          {photo.description}
+                          {video.description}
                         </p>
                       </div>
                     )}
@@ -167,10 +140,10 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
           ) : (
             <Card className="w-full">
               <CardContent className="flex flex-col items-center justify-center py-16 px-4">
-                <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-medium">No photos yet</h3>
+                <Video className="h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mt-4 text-lg font-medium">No videos yet</h3>
                 <p className="mt-2 text-sm text-center text-muted-foreground max-w-[420px]">
-                  Add photos to the model's gallery by clicking the button above.
+                  Add videos to the model's gallery by clicking the button above.
                 </p>
               </CardContent>
             </Card>
@@ -178,12 +151,12 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
         </div>
       </div>
 
-      <AlertDialog open={!!photoToDelete} onOpenChange={() => setPhotoToDelete(null)}>
+      <AlertDialog open={!!videoToDelete} onOpenChange={() => setVideoToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Photo</AlertDialogTitle>
+            <AlertDialogTitle>Delete Video</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this photo? This action cannot be undone.
+              Are you sure you want to delete this video? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -198,18 +171,18 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!editingPhoto} onOpenChange={() => setEditingPhoto(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:w-auto max-w-4xl">
+      <Dialog open={!!editingVideo} onOpenChange={() => setEditingVideo(null)}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Edit Photo Keywords</DialogTitle>
+            <DialogTitle>Edit Video Keywords</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col md:grid md:grid-cols-2 gap-6 pt-4">
-            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted/50">
-              {editingPhoto && (
-                <img
-                  src={editingPhoto.image}
-                  alt="Edit photo"
-                  className="w-full h-full object-cover object-center"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted/50">
+              {editingVideo && (
+                <video
+                  src={editingVideo.video}
+                  className="w-full h-full object-cover"
+                  controls
                 />
               )}
             </div>
@@ -244,7 +217,7 @@ export function ModelPhotos({ photos, onCreatePhoto, onTogglePrivate, onUpdateDe
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setEditingPhoto(null)}
+                  onClick={() => setEditingVideo(null)}
                   disabled={isSubmitting}
                 >
                   Cancel

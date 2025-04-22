@@ -2,6 +2,7 @@ import {
   Users,
   LayoutDashboard,
   UserCircle,
+  UserPlus,
   Target,
   MessageSquare,
   Image,
@@ -38,7 +39,7 @@ export const menuItems = [
     href: '/reviews'
   },
   {
-    title: 'Photo Requests',
+    title: 'Media Requests',
     icon: Image,
     href: '/photo-requests'
   },
@@ -51,6 +52,11 @@ export const menuItems = [
     title: 'Users',
     icon: Users,
     href: '/users'
+  },
+  {
+    title: 'Partners',
+    icon: UserPlus,
+    href: '/partners'
   },
   {
     title: 'Settings',

@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Coins } from 'lucide-react';
+import { Image, Video } from 'lucide-react'; 
 
 interface RequestStats {
   found: number;
@@ -10,68 +10,98 @@ interface RequestStats {
   totalSpent: number;
 }
 
-interface StatsProps {
-  stats: RequestStats;
+interface PhotoVideoStats {
+  photo: RequestStats;
+  video: RequestStats;
 }
 
-export function Stats({ stats }: StatsProps) {
+interface StatsProps {
+  stats: PhotoVideoStats;
+  activeTab: 'photos' | 'videos';
+}
+
+export function Stats({ stats, activeTab }: StatsProps) {
+  // Get the active stats based on the current tab
+  const activeStats = activeTab === 'photos' ? stats.photo : stats.video;
+  
   return (
     <div className="grid gap-4 sm:grid-cols-4">
-      <Card>
-        <CardContent className="p-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="pr-20">
-              <p className="text-xs font-medium text-muted-foreground">Found</p>
-              <p className="text-lg font-bold mt-0.5">{stats.found || 0}</p>
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">Found</Badge>
             </div>
-            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 absolute top-2 right-2">Found</Badge>
+            <p className="text-lg font-bold flex items-center">
+              {activeStats.found || 0}
+              <span className="ml-2">
+                {activeTab === 'photos' ? (
+                  <Image className="h-4 w-4 text-emerald-500/70" />
+                ) : (
+                  <Video className="h-4 w-4 text-emerald-500/70" />
+                )}
+              </span>
+            </p>
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="p-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="pr-20">
-              <p className="text-xs font-medium text-muted-foreground">Not Found</p>
-              <p className="text-lg font-bold mt-0.5">{stats.not_found || 0}</p>
+      
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-500">Not Found</Badge>
             </div>
-            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 absolute top-2 right-2">Not Found</Badge>
+            <p className="text-lg font-bold flex items-center">
+              {activeStats.not_found || 0}
+              <span className="ml-2">
+                {activeTab === 'photos' ? (
+                  <Image className="h-4 w-4 text-amber-500/70" />
+                ) : (
+                  <Video className="h-4 w-4 text-amber-500/70" />
+                )}
+              </span>
+            </p>
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="p-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="pr-20">
-              <p className="text-xs font-medium text-muted-foreground">Cancelled</p>
-              <p className="text-lg font-bold mt-0.5">{stats.cancel || 0}</p>
+      
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-red-500/10 text-red-500">Cancelled</Badge>
             </div>
-            <Badge variant="secondary" className="bg-red-500/10 text-red-500 absolute top-2 right-2">Cancelled</Badge>
+            <p className="text-lg font-bold flex items-center">
+              {activeStats.cancel || 0}
+              <span className="ml-2">
+                {activeTab === 'photos' ? (
+                  <Image className="h-4 w-4 text-red-500/70" />
+                ) : (
+                  <Video className="h-4 w-4 text-red-500/70" />
+                )}
+              </span>
+            </p>
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="p-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="pr-20">
-              <p className="text-xs font-medium text-muted-foreground">Completed</p>
-              <p className="text-lg font-bold mt-0.5">{stats.completed || 0}</p>
+      
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-green-500/10 text-green-500">Completed</Badge>
             </div>
-            <Badge variant="secondary" className="bg-green-500/10 text-green-500 absolute top-2 right-2">Completed</Badge>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4 relative">
-          <div className="flex items-center justify-between">
-            <div className="pr-20">
-              <p className="text-xs font-medium text-muted-foreground">Total Spent</p>
-              <p className="text-lg font-bold mt-0.5">{stats.totalSpent || 0} TFC</p>
-            </div>
-            <Badge variant="secondary" className="bg-primary/10 text-primary absolute top-2 right-2">
-              <Coins className="h-3.5 w-3.5 mr-1.5" />
-              Tokens
-            </Badge>
+            <p className="text-lg font-bold flex items-center">
+              {activeStats.completed || 0}
+              <span className="ml-2">
+                {activeTab === 'photos' ? (
+                  <Image className="h-4 w-4 text-green-500/70" />
+                ) : (
+                  <Video className="h-4 w-4 text-green-500/70" />
+                )}
+              </span>
+            </p>
           </div>
         </CardContent>
       </Card>

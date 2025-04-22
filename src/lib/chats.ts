@@ -94,7 +94,7 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
 
 export async function sendMessage(chatId: string, data: { 
   content: string;
-  messageType: 'text' | 'image';
+  messageType: 'text' | 'image' | 'voice' | 'short_video';
   imageUrl?: string;
   userId?: string;
   isFromUser?: boolean;

@@ -3,7 +3,7 @@ import { Model } from '@/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { MessageSquare, ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { MessageSquare, ImageIcon, Pencil, Trash2, Video } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,17 +101,21 @@ export function ModelCard({ model, onEdit, onDelete, onCreatePost }: ModelCardPr
           </div>
         </CardHeader>
         <CardContent className="px-3 sm:px-4">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="h-4 w-4" />
+          <div className="flex items-center justify-between text-sm mb-2">
+            <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MessageSquare className="h-3.5 w-3.5" />
                 <span>{model.postCount || 0}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <ImageIcon className="h-4 w-4" />
-                <span>{model.storyCount || 0}</span>
-              </div> 
-            </div> 
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span>{model.photoCount || 0}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Video className="h-3.5 w-3.5" />
+                <span>{model.videoCount || 0}</span>
+              </div>
+            </div>
             <Badge variant="secondary" className={cn(
               model.isActive 
                 ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"

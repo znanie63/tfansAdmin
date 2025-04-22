@@ -1,22 +1,10 @@
 import { Model } from '@/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Languages, Ruler, Power, CircleDotIcon, Weight, Link, Instagram, Pencil, Trash2, Coins, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-
-import {
-  Languages,
-  Ruler,
-  Power,
-  CircleDotIcon,
-  Weight,
-  Link,
-  Instagram,
-  Pencil,
-  Trash2, 
-  Coins,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
+import { VoiceSettings } from './form/voice-settings';
+import { getModelVoice } from '@/lib/voices';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
@@ -35,6 +23,7 @@ interface ModelProfileProps {
   model: Model;
   onEdit: () => void;
   onDelete: () => void;
+  onVoiceChange?: () => void;
 }
 
 interface InfoItemProps {
@@ -55,10 +44,29 @@ function InfoItem({ icon: Icon, label, value }: InfoItemProps) {
   );
 }
 
-export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
+export function ModelProfile({ model, onEdit, onDelete, onVoiceChange }: ModelProfileProps) {
   const [showFullPrompt, setShowFullPrompt] = useState(false);
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
+  const [hasVoice, setHasVoice] = useState(false);
+  const [loading, setLoading] = useState(true);
   const PROMPT_MAX_LENGTH = 250;
   const shouldShowButton = model.prompt && model.prompt.length > PROMPT_MAX_LENGTH;
+
+  useEffect(() => {
+    const loadVoice = async () => {
+      try {
+        setLoading(true);
+        const voice = await getModelVoice(model.id);
+        setHasVoice(!!voice);
+      } catch (error) {
+        console.error('Error loading voice:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadVoice();
+  }, [model.id]);
 
   return (
     <Card className="overflow-hidden">
@@ -184,6 +192,25 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
             value={`${model.price_photo} TFC / photo`}
           />
         </div>
+        <div className="space-y-4">
+          <h3 className="font-medium text-sm text-muted-foreground mb-2">Voice Settings</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{hasVoice ? 'Voice Configured' : 'No Voice Configured'}</span>
+            </div>
+            <Button
+              onClick={() => setShowVoiceDialog(true)}
+              variant="outline"
+              size="sm"
+              className={cn(
+                hasVoice ? "bg-green-500/10 text-green-500 hover:bg-green-500/20" : ""
+              )}
+            >
+              {loading ? 'Loading...' : hasVoice ? 'Edit Voice' : 'Configure Voice'}
+            </Button>
+          </div>
+        </div>
         <Separator />
         <div className="flex flex-col gap-2">
           <Button
@@ -226,6 +253,13 @@ export function ModelProfile({ model, onEdit, onDelete }: ModelProfileProps) {
           </Dialog>
         </div>
       </CardContent>
+
+      <VoiceSettings
+        modelId={model.id}
+        open={showVoiceDialog}
+        onOpenChange={setShowVoiceDialog}
+        onVoiceChange={onVoiceChange}
+      />
     </Card>
   );
 }

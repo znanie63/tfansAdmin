@@ -14,6 +14,8 @@ import { Chats } from '@/pages/chats';
 import { Settings } from '@/pages/settings';
 import { Reviews } from '@/pages/reviews';
 import { Stories } from '@/pages/stories';
+import { Partners } from '@/pages/partners';
+import { PartnerPage } from '@/pages/partners/[id]';
 import { Users } from '@/pages/users';
 import { PhotoRequests } from '@/pages/photo-requests';
 import { Payments } from '@/pages/payments';
@@ -39,7 +41,9 @@ function App() {
                 <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
                 <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
                 <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
+                <Route path="/partners/:id" element={<ProtectedRoute><PartnerPage /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                <Route path="/partners" element={<ProtectedRoute><Partners /></ProtectedRoute>} />
                 <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                 <Route path="/photo-requests" element={<ProtectedRoute><PhotoRequests /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

@@ -25,7 +25,7 @@ interface MessageRecord {
   chat_id: string;
   user_id: string;
   content: string;
-  message_type: 'text' | 'image';
+  message_type: 'text' | 'image' | 'voice';
   image_url: string | null;
   is_from_user: boolean;
   is_admin: boolean;
@@ -60,8 +60,9 @@ export function transformMessageFromDB(record: MessageRecord): Message {
   return {
     id: record.id,
     isFromUser: record.is_from_user,
+    type: record.message_type,
     text: record.message_type === 'text' ? record.content : undefined,
-    image: record.message_type === 'image' ? record.image_url || undefined : undefined,
+    image: (record.message_type === 'image' || record.message_type === 'voice' || record.message_type === 'short_video') ? record.image_url || undefined : undefined,
     timestamp: new Date(record.created_at),
   };
 }

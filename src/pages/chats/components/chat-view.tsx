@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Volume2, Video } from 'lucide-react';
+import { AudioPlayer } from '@/components/chat/audio-player';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
@@ -129,12 +130,26 @@ export function ChatView({ chat, loading = false, onBack, onMessageSent, onDelet
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted"
               )}>
-                {message.image && (
+                {message.type === 'image' && message.image && (
                   <img
                     src={message.image}
                     alt="Message attachment"
                     className="rounded-md mb-2 max-w-full"
                   />
+                )}
+                {message.type === 'voice' && message.image && (
+                  <AudioPlayer src={message.image} />
+                )}
+                {message.type === 'short_video' && message.image && (
+                  <div className="relative rounded-md mb-2 overflow-hidden">
+                    <video 
+                      src={message.image} 
+                      controls 
+                      className="max-w-full"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
                 )}
                 {message.text && <p className="text-sm">{message.text}</p>}
                 <span className="text-xs opacity-70 mt-1 block">

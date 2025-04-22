@@ -1,14 +1,15 @@
-import { Image } from 'lucide-react';
+import { Image, Video } from 'lucide-react';
 import { useRef, useCallback } from 'react';
-import { PhotoRequest, PhotoRequestStatus } from '@/types';
+import { PhotoRequest, PhotoRequestStatus, VideoRequest, VideoRequestStatus } from '@/types';
 import { RequestCard } from './request-card';
 
 interface RequestListProps {
-  requests: PhotoRequest[];
-  onStatusChange: (requestId: string, status: PhotoRequestStatus) => void;
+  requests: (PhotoRequest | VideoRequest)[];
+  onStatusChange: (requestId: string, status: PhotoRequestStatus | VideoRequestStatus) => void;
   onLoadMore: () => void;
   hasMore: boolean;
   loading: boolean;
+  type: 'photo' | 'video';
 }
 
 export function RequestList({
@@ -16,7 +17,8 @@ export function RequestList({
   onStatusChange,
   onLoadMore,
   hasMore,
-  loading
+  loading,
+  type
 }: RequestListProps) {
   const observerRef = useRef<IntersectionObserver>();
   const lastRequestRef = useRef<HTMLDivElement>(null);
@@ -42,10 +44,14 @@ export function RequestList({
   if (requests.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Image className="h-12 w-12 text-muted-foreground/50" />
-        <h3 className="mt-4 text-lg font-medium">No photo requests</h3>
+        {type === 'photo' ? (
+          <Image className="h-12 w-12 text-muted-foreground/50" />
+        ) : (
+          <Video className="h-12 w-12 text-muted-foreground/50" />
+        )}
+        <h3 className="mt-4 text-lg font-medium">No {type} requests</h3>
         <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-          Photo requests from users will appear here.
+          {type === 'photo' ? 'Photo' : 'Video'} requests from users will appear here.
         </p>
       </div>
     );
@@ -60,6 +66,7 @@ export function RequestList({
         >
           <RequestCard
             request={request}
+            type={type}
             onStatusChange={onStatusChange}
           />
         </div>

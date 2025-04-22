@@ -11,12 +11,22 @@ import { EmptyState } from './components/empty-state';
 import { ModelGrid } from './components/model-grid';
 import { EditDialog } from './components/edit-dialog';
 
+interface CategoryCounts {
+  [key: string]: number;
+}
+
 export function Models() {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showUncategorized, setShowUncategorized] = useState(false);
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCounts>({});
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    active: 0,
+    inactive: 0
+  });
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +47,29 @@ export function Models() {
         console.log('Fetched models:', data); // Debug log
         setModels(data);
         setCategories(categoriesData);
+
+        // Calculate status counts
+        const activeCount = data.filter(model => model.isActive).length;
+        const inactiveCount = data.filter(model => !model.isActive).length;
+        setStatusCounts({
+          all: data.length,
+          active: activeCount,
+          inactive: inactiveCount
+        });
+        
+        // Calculate category counts
+        const counts: CategoryCounts = {};
+        data.forEach(model => {
+          if (!model.categories?.length) {
+            counts['uncategorized'] = (counts['uncategorized'] || 0) + 1;
+          } else {
+            model.categories.forEach(category => {
+              counts[category.id] = (counts[category.id] || 0) + 1;
+            });
+          }
+        });
+        setCategoryCounts(counts);
+        
       } catch (error: any) {
         console.error('Error loading models:', error);
         setError(error.message || 'Failed to load models');
@@ -180,6 +213,7 @@ export function Models() {
         <div className="space-y-6">
             <StatusFilter
               selectedStatus={selectedStatus}
+              counts={statusCounts}
               onStatusChange={setSelectedStatus}
             />
           
@@ -188,6 +222,8 @@ export function Models() {
               categories={categories}
               selectedCategories={selectedCategories}
               showUncategorized={showUncategorized}
+              counts={categoryCounts}
+              totalModels={statusCounts.all}
               onCategoryChange={handleCategoryChange}
               onUncategorizedChange={() => {
                 setShowUncategorized(!showUncategorized);

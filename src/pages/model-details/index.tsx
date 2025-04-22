@@ -20,14 +20,17 @@ import { ModelProfile } from '@/components/models/model-profile';
 import { ModelPosts } from '@/components/models/model-posts';
 import { ModelStories } from '@/components/models/model-stories';
 import { ModelPhotos } from '@/components/models/model-photos';
+import { ModelVideos } from '@/components/models/model-videos';
 import { ModelStats } from '@/components/models/model-stats';
 import { ModelPhotoForm } from '@/components/models/model-photo-form';
+import { ModelVideoForm } from '@/components/models/model-video-form';
 import { PostForm } from '@/components/posts/post-form';
 import { StoryForm } from '@/components/stories/story-form';
-import { Model, Post, Story, ModelPhoto } from '@/types';
+import { Model, Post, Story, ModelPhoto, ModelVideo } from '@/types';
+import { Video } from 'lucide-react';
 import { getModelPosts, createPost, deletePost, uploadPostImage } from '@/lib/posts';
 import { getModelStories, createStory, deleteStory, uploadStoryImage } from '@/lib/stories';
-import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto } from '@/lib/models';
+import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto, getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo, uploadModelVideo } from '@/lib/models';
 import { toast } from 'sonner';
 import { getModel, updateModel, deleteModel } from '@/lib/models';
 
@@ -46,41 +49,46 @@ export function ModelDetails() {
   const [isSubmittingStory, setIsSubmittingStory] = useState(false);
   const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
   const [isCreatingPhoto, setIsCreatingPhoto] = useState(false);
+  const [videos, setVideos] = useState<ModelVideo[]>([]);
+  const [isSubmittingVideo, setIsSubmittingVideo] = useState(false);
+  const [isCreatingVideo, setIsCreatingVideo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadModel = async () => {
+    try {
+      if (!id) {
+        setError('No model ID provided');
+        return;
+      }
+
+      const modelData = await getModel(id);
+      setModel(modelData);
+      
+      // Load posts, stories, photos and videos
+      const [postsData, storiesData, photosData, videosData] = await Promise.all([
+        getModelPosts(id),
+        getModelStories(id),
+        getModelPhotos(id),
+        getModelVideos(id)
+      ]);
+      
+      setPosts(postsData);
+      setStories(storiesData);
+      setPhotos(photosData);
+      setVideos(videosData);
+    } catch (err) {
+      console.error('Error loading model:', err);
+      toast.error('Failed to load model');
+      navigate('/models');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBack = () => navigate(-1);
 
   useEffect(() => {
-    const loadModel = async () => {
-      try {
-        if (!id) {
-          setError('No model ID provided');
-          return;
-        }
-
-        const modelData = await getModel(id);
-        setModel(modelData);
-        
-        // Load posts and stories
-        const [postsData, storiesData, photosData] = await Promise.all([
-          getModelPosts(id),
-          getModelStories(id),
-          getModelPhotos(id)
-        ]);
-        
-        setPosts(postsData);
-        setStories(storiesData);
-        setPhotos(photosData);
-      } catch (err) {
-        console.error('Error loading model:', err);
-        toast.error('Failed to load model');
-        navigate('/models');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadModel();
   }, [id, navigate]);
 
@@ -196,16 +204,15 @@ export function ModelDetails() {
       setIsSubmittingPhoto(true);
 
       // Upload all photos in parallel
-      const uploadPromises = data.imageFiles.map(async ({ file, description }) => {
-        const imagePath = await uploadModelPhoto(file);
+      const uploadPromises = data.imageFiles.map(async ({ file, description, isPrivate }) => {
         return createModelPhoto(model.id, { 
-          image: imagePath,
-          description: description.trim()
+          image: file,
+          description: description.trim(),
+          isPrivate
         });
       });
 
       const newPhotos = await Promise.all(uploadPromises);
-
       setPhotos(prev => [...newPhotos, ...prev]);
       setIsCreatingPhoto(false);
       toast.success(`${newPhotos.length} photos uploaded successfully`);
@@ -255,6 +262,74 @@ export function ModelDetails() {
     } catch (error) {
       console.error('Error deleting photo:', error);
       toast.error('Failed to delete photo');
+    }
+  };
+
+  const handleCreateVideo = () => {
+    setIsCreatingVideo(true);
+  };
+
+  const handleSubmitVideo = async (data: { videoFile: File; description: string; isPrivate: boolean }) => {
+    try {
+      if (!model) return;
+      setIsSubmittingVideo(true);
+
+      const videoPath = await uploadModelVideo(data.videoFile);
+      const newVideo = await createModelVideo(model.id, {
+        video: videoPath,
+        description: data.description.trim(),
+        isPrivate: data.isPrivate
+      });
+
+      setVideos(prev => [newVideo, ...prev]);
+      setIsCreatingVideo(false);
+      toast.success('Video uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      toast.error('Failed to upload video');
+    } finally {
+      setIsSubmittingVideo(false);
+    }
+  };
+
+  const handleToggleVideoPrivate = async (video: ModelVideo) => {
+    try {
+      const updatedVideo = await updateModelVideo(video.id, {
+        isPrivate: !video.isPrivate,
+      });
+      setVideos(prev => prev.map(v => 
+        v.id === updatedVideo.id ? updatedVideo : v
+      ));
+      toast.success('Video visibility updated');
+    } catch (error) {
+      console.error('Error updating video:', error);
+      toast.error('Failed to update video');
+    }
+  };
+
+  const handleUpdateVideoDescription = async (video: ModelVideo, description: string) => {
+    try {
+      const updatedVideo = await updateModelVideo(video.id, {
+        description: description.trim(),
+      });
+      setVideos(prev => prev.map(v => 
+        v.id === updatedVideo.id ? updatedVideo : v
+      ));
+      toast.success('Video keywords updated');
+    } catch (error) {
+      console.error('Error updating video:', error);
+      toast.error('Failed to update video');
+    }
+  };
+
+  const handleDeleteVideo = async (videoId: string) => {
+    try {
+      await deleteModelVideo(videoId);
+      setVideos(prev => prev.filter(v => v.id !== videoId));
+      toast.success('Video deleted successfully');
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      toast.error('Failed to delete video');
     }
   };
 
@@ -319,6 +394,8 @@ export function ModelDetails() {
               model={model}
               onEdit={() => setShowEditDialog(true)}
               onDelete={handleDeleteModel}
+              onVoiceChange={loadModel}
+              onVoiceChange={loadModel}
             />
           </div>
         </div>
@@ -326,7 +403,8 @@ export function ModelDetails() {
           <Tabs defaultValue="stats" className="w-full mt-6">
             <div className="sticky top-[80px] z-10 bg-background/95 backdrop-blur-sm pb-4">
               <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background/95 to-transparent" />
-              <TabsList className="w-full h-12 sm:h-14 bg-card rounded-lg p-1 border shadow-sm">
+              <div className="overflow-x-auto">
+                <TabsList className="min-w-max w-full h-12 sm:h-14 bg-card rounded-lg p-1 border shadow-sm">
                 <TabsTrigger value="stats" className="flex-1 h-10 sm:h-12">
                   <div className="flex items-center justify-center gap-1 sm:gap-2">
                     <ChartIcon className="h-4 w-4" />
@@ -351,7 +429,14 @@ export function ModelDetails() {
                     <span className="font-medium">Photos</span>
                   </div>
                 </TabsTrigger>
-              </TabsList>
+                <TabsTrigger value="videos" className="flex-1 h-10 sm:h-12">
+                  <div className="flex items-center justify-center gap-1 sm:gap-2">
+                    <Video className="h-4 w-4" />
+                    <span className="font-medium">Videos</span>
+                  </div>
+                </TabsTrigger>
+                </TabsList>
+              </div>
               <div className="absolute inset-x-0 -bottom-4 h-4 bg-gradient-to-b from-background/95 to-transparent" />
             </div>
             <TabsContent value="stats" className="w-full min-h-[400px]">
@@ -380,18 +465,28 @@ export function ModelDetails() {
                 onDeletePhoto={handleDeletePhoto}
               />
             </TabsContent>
+            <TabsContent value="videos" className="w-full min-h-[400px]">
+              <ModelVideos
+                videos={videos}
+                onCreateVideo={handleCreateVideo}
+                onTogglePrivate={handleToggleVideoPrivate}
+                onUpdateDescription={handleUpdateVideoDescription}
+                onDeleteVideo={handleDeleteVideo}
+              />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto px-0 sm:px-6">
           <DialogHeader>
             <DialogTitle>Edit Model Profile</DialogTitle>
           </DialogHeader>
           <ModelForm
             initialData={model}
             onSubmit={handleUpdateModel}
+            className="px-4 sm:px-0"
           />
         </DialogContent>
       </Dialog>
@@ -434,6 +529,19 @@ export function ModelDetails() {
             isSubmitting={isSubmittingPhoto}
             onSubmit={handleSubmitPhoto}
             onCancel={() => setIsCreatingPhoto(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreatingVideo} onOpenChange={setIsCreatingVideo}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Upload Video</DialogTitle>
+          </DialogHeader>
+          <ModelVideoForm
+            isSubmitting={isSubmittingVideo}
+            onSubmit={handleSubmitVideo}
+            onCancel={() => setIsCreatingVideo(false)}
           />
         </DialogContent>
       </Dialog>

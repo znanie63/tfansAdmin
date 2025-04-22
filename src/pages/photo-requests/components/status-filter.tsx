@@ -8,8 +8,7 @@ interface StatusFilterProps {
 
 export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterProps) {
   return (
-    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 border-b">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 w-full overflow-hidden">
       <Button
         variant={selectedStatus === 'all' ? 'default' : 'outline'}
         size="sm"
@@ -21,7 +20,7 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
         variant={selectedStatus === 'found' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onStatusChange('found')}
-        className="text-emerald-500"
+        className={selectedStatus === 'found' ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : ''}
       >
         Found
       </Button>
@@ -29,7 +28,7 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
         variant={selectedStatus === 'not_found' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onStatusChange('not_found')}
-        className="text-amber-500"
+        className={selectedStatus === 'not_found' ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : ''}
       >
         Not Found
       </Button>
@@ -37,7 +36,7 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
         variant={selectedStatus === 'cancel' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onStatusChange('cancel')}
-        className="text-red-500"
+        className={selectedStatus === 'cancel' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : ''}
       >
         Cancelled
       </Button>
@@ -45,11 +44,10 @@ export function StatusFilter({ selectedStatus, onStatusChange }: StatusFilterPro
         variant={selectedStatus === 'completed' ? 'default' : 'outline'}
         size="sm"
         onClick={() => onStatusChange('completed')}
-        className="text-green-500"
+        className={selectedStatus === 'completed' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : ''}
       >
         Completed
       </Button>
-    </div>
     </div>
   );
 }
