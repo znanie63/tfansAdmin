@@ -1,3 +1,9 @@
+export * from './photos';
+export * from './videos';
+export * from './storage';
+export * from './types';
+export * from './transformers';
+
 import { supabase } from '../supabase';
 import { Model } from '@/types';
 import { ModelRecord } from './types';
@@ -5,6 +11,8 @@ import { transformModelFromDB, transformModelToDB } from './transformers';
 import { uploadModelImage } from './storage';
 import { assignCategories } from '../categories';
 import { createVoice, updateVoice } from '../voices';
+
+export { getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo };
 
 export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
   try {
@@ -234,9 +242,3 @@ export async function getModels(): Promise<Model[]> {
   console.log('Transformed models:', transformedModels); // Debug log
   return transformedModels;
 }
-
-export * from './photos';
-export * from './videos';
-export * from './storage';
-export * from './types';
-export * from './transformers';
