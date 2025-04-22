@@ -235,8 +235,8 @@ export async function getModels(): Promise<Model[]> {
   return transformedModels;
 }
 
-export * from './photos';
-export * from './videos';
-export * from './storage';
-export * from './types';
-export * from './transformers';
+export * from './photos.ts';
+export * from './videos.ts';
+export * from './storage.ts';
+export * from './types.ts';
+export * from './transformers.ts';
