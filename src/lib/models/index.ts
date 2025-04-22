@@ -5,6 +5,7 @@ import { transformModelFromDB, transformModelToDB } from './transformers';
 import { uploadModelImage } from './storage';
 import { assignCategories } from '../categories';
 import { createVoice, updateVoice } from '../voices';
+import { getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo } from './videos';
 
 export async function createModel(model: Omit<Model, 'id'>): Promise<Model> {
   try {
