@@ -235,35 +235,8 @@ export async function getModels(): Promise<Model[]> {
   return transformedModels;
 }
 
-export { 
-  createModelPhoto,
-  updateModelPhoto,
-  deleteModelPhoto,
-  getModelPhotos 
-} from './photos';
-
-export {
-  createModelVideo,
-  updateModelVideo,
-  deleteModelVideo,
-  getModelVideos
-} from './videos';
-
-export {
-  uploadModelImage,
-  uploadModelPhoto,
-  uploadModelVideo
-} from './storage';
-
-export type {
-  ModelRecord,
-  ModelPhotoRecord,
-  ModelVideoRecord
-} from './types';
-
-export {
-  transformModelFromDB,
-  transformModelToDB,
-  transformModelPhotoFromDB,
-  transformModelVideoFromDB
-} from './transformers';
+export * from './photos';
+export * from './videos';
+export * from './storage';
+export * from './types';
+export * from './transformers';
