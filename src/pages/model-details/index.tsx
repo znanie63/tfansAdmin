@@ -30,7 +30,7 @@ import { Model, Post, Story, ModelPhoto, ModelVideo } from '@/types';
 import { Video } from 'lucide-react';
 import { getModelPosts, createPost, deletePost, uploadPostImage } from '@/lib/posts';
 import { getModelStories, createStory, deleteStory, uploadStoryImage } from '@/lib/stories';
-import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto, getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo, uploadModelVideo } from '@/lib/models';
+import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto, getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo, uploadModelVideo } from '@/lib/models/index.ts';
 import { toast } from 'sonner';
 import { getModel, updateModel, deleteModel } from '@/lib/models';
 
