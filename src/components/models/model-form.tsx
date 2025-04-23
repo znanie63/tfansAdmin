@@ -165,7 +165,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false, classNa
       price_photo: initialData?.price_photo || 50,
       price_voice: initialData?.price_voice || 50,
       price_video: initialData?.price_video || 50,
-      send_voice_chance: initialData?.send_voice_chance || 50,
+      send_voice_chance: initialData?.send_voice_chance,
       isActive: initialData?.isActive ?? false,
       categories: initialData?.categories?.map(c => c.id) || [],
       voice: {
@@ -382,7 +382,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false, classNa
                   />
                 </FormControl>
                 <FormDescription>
-                  Probability of sending voice messages instead of text (0-100)
+                  Probability of sending voice messages instead of text (0-101)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
