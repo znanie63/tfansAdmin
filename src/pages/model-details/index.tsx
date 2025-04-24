@@ -65,20 +65,6 @@ export function ModelDetails() {
       const modelData = await getModel(id);
       setModel(modelData);
       
-      // Log model pricing and voice settings
-      console.log('Model Data:', {
-        name: `${modelData.firstName} ${modelData.lastName}`,
-        prices: {
-          message: modelData.price,
-          photo: modelData.price_photo,
-          voice: modelData.price_voice,
-          video: modelData.price_video
-        },
-        voiceSettings: {
-          chance: modelData.send_voice_chance,
-        }
-      });
-      
       // Load posts, stories, photos and videos
       const [postsData, storiesData, photosData, videosData] = await Promise.all([
         getModelPosts(id),
