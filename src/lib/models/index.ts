@@ -161,6 +161,7 @@ export async function deleteModel(id: string): Promise<void> {
 }
 
 export async function getModel(id: string): Promise<Model> {
+  console.log ('abc2');
   const { data, error } = await supabase
     .from('models')
     .select(`

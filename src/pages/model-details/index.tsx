@@ -56,6 +56,7 @@ export function ModelDetails() {
   const [error, setError] = useState<string | null>(null);
 
   const loadModel = async () => {
+    console.log ('Loadmodel', id);
     try {
       if (!id) {
         setError('No model ID provided');
