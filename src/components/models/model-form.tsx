@@ -24,6 +24,7 @@ import { CategoriesSection } from './form/categories-section';
 import { VoiceSettings } from './form/voice-settings';
 import { Characteristics } from './form/characteristics';
 import { SocialLinks } from './form/social-links';
+import { Pricing } from './form/pricing';
 import { Model } from '@/types';
 
 interface FormValues {
@@ -361,6 +362,7 @@ export function ModelForm({ initialData, onSubmit, isSubmitting = false, classNa
             setCharacteristics={setCharacteristics}
           />
           <SocialLinks form={form} />
+          <Pricing form={form} />
         </div>
 
         <div className="space-y-2">

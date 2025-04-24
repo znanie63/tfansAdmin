@@ -1,10 +1,9 @@
 import { Model } from '@/types';
 import { useState, useEffect } from 'react';
-import { Languages, Ruler, Power, CircleDotIcon, Weight, Link, Instagram, Pencil, Trash2, Coins, ChevronDown, ChevronUp, Volume2, DollarSign } from 'lucide-react';
+import { Languages, Ruler, Power, CircleDotIcon, Weight, Link, Instagram, Pencil, Trash2, Coins, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { VoiceSettings } from './form/voice-settings';
-import { PriceSettings } from './form/price-settings';
 import { getModelVoice } from '@/lib/voices';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -48,7 +47,6 @@ function InfoItem({ icon: Icon, label, value }: InfoItemProps) {
 export function ModelProfile({ model, onEdit, onDelete, onVoiceChange }: ModelProfileProps) {
   const [showFullPrompt, setShowFullPrompt] = useState(false);
   const [showVoiceDialog, setShowVoiceDialog] = useState(false);
-  const [showPriceDialog, setShowPriceDialog] = useState(false);
   const [hasVoice, setHasVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const PROMPT_MAX_LENGTH = 250;
@@ -182,21 +180,17 @@ export function ModelProfile({ model, onEdit, onDelete, onVoiceChange }: ModelPr
         </div>
         <Separator />
         <div className="space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground mb-2">Price Settings</h3>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Pricing Configuration</span>
-            </div>
-            <Button
-              onClick={() => setShowPriceDialog(true)}
-              variant="outline"
-              size="sm"
-              className="bg-green-500/10 text-green-500 hover:bg-green-500/20"
-            >
-              Configure Prices
-            </Button>
-          </div>
+          <h3 className="font-medium text-sm text-muted-foreground mb-2">Pricing</h3>
+          <InfoItem
+            icon={Coins}
+            label="Message Price"
+            value={`${model.price} TFC / 1000 tokens`}
+          />
+          <InfoItem
+            icon={Coins}
+            label="Photo Price"
+            value={`${model.price_photo} TFC / photo`}
+          />
         </div>
         <div className="space-y-4">
           <h3 className="font-medium text-sm text-muted-foreground mb-2">Voice Settings</h3>
@@ -265,19 +259,6 @@ export function ModelProfile({ model, onEdit, onDelete, onVoiceChange }: ModelPr
         open={showVoiceDialog}
         onOpenChange={setShowVoiceDialog}
         onVoiceChange={onVoiceChange}
-      />
-
-      <PriceSettings
-        modelId={model.id}
-        open={showPriceDialog}
-        onOpenChange={setShowPriceDialog}
-        onPriceChange={onVoiceChange}
-        initialPrices={{
-          price: model.price,
-          price_photo: model.price_photo,
-          price_voice: model.price_voice,
-          price_video: model.price_video,
-        }}
       />
     </Card>
   );

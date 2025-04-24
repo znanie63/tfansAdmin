@@ -30,7 +30,7 @@ import { Model, Post, Story, ModelPhoto, ModelVideo } from '@/types';
 import { Video } from 'lucide-react';
 import { getModelPosts, createPost, deletePost, uploadPostImage } from '@/lib/posts';
 import { getModelStories, createStory, deleteStory, uploadStoryImage } from '@/lib/stories';
-import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto, getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo, uploadModelVideo } from '@/lib/models/index';
+import { getModelPhotos, createModelPhoto, updateModelPhoto, deleteModelPhoto, uploadModelPhoto, getModelVideos, createModelVideo, updateModelVideo, deleteModelVideo, uploadModelVideo } from '@/lib/models/index.ts';
 import { toast } from 'sonner';
 import { getModel, updateModel, deleteModel } from '@/lib/models';
 
@@ -64,6 +64,20 @@ export function ModelDetails() {
 
       const modelData = await getModel(id);
       setModel(modelData);
+      
+      // Log model pricing and voice settings
+      console.log('Model Data:', {
+        name: `${modelData.firstName} ${modelData.lastName}`,
+        prices: {
+          message: modelData.price,
+          photo: modelData.price_photo,
+          voice: modelData.price_voice,
+          video: modelData.price_video
+        },
+        voiceSettings: {
+          chance: modelData.send_voice_chance,
+        }
+      });
       
       // Load posts, stories, photos and videos
       const [postsData, storiesData, photosData, videosData] = await Promise.all([
