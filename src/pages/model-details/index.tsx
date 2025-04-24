@@ -55,8 +55,14 @@ export function ModelDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (id) {
+      console.log('Loading model with ID:', id);
+      loadModel();
+    }
+  }, [id]);
+
   const loadModel = async () => {
-    console.log ('Loadmodel', id);
     try {
       if (!id) {
         setError('No model ID provided');
