@@ -161,7 +161,6 @@ export async function deleteModel(id: string): Promise<void> {
 }
 
 export async function getModel(id: string): Promise<Model> {
-  console.log ('abc2');
   const { data, error } = await supabase
     .from('models')
     .select(`
@@ -177,7 +176,7 @@ export async function getModel(id: string): Promise<Model> {
     `)
     .eq('id', id)
     .single();
-  console.log ('abc', data);
+
   if (error) {
     console.error('Fetch error:', error);
     throw new Error('Failed to fetch model');
@@ -213,21 +212,7 @@ export async function getModels(): Promise<Model[]> {
     `)
     .order('created_at', { ascending: false });
 
-  console.log('Raw database response:', {
-    data: data?.map(model => ({
-      id: model.id,
-      firstName: model.first_name,
-      lastName: model.last_name,
-      nickname: model.nickname,
-      categories: model.categories,
-      postCount: model.postCount?.[0]?.count || 0,
-      storyCount: model.storyCount?.[0]?.count || 0,
-      photoCount: model.photoCount?.[0]?.count || 0,
-      videoCount: model.videoCount?.[0]?.count || 0,
-      isActive: model.is_active
-    })),
-    error
-  });
+  console.log('Raw database response:', { data, error }); // Debug log
 
   if (error) {
     console.error('Fetch error:', error);
