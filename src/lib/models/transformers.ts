@@ -47,11 +47,11 @@ export function transformModelToDB(model: Partial<Model>): Partial<ModelRecord> 
     ...(model.instagramLink !== undefined && { instagram_link: model.instagramLink || null }),
     ...(model.otherSocialLink !== undefined && { other_social_link: model.otherSocialLink || null }),
     ...(model.prompt !== undefined && { prompt: model.prompt || null }),
-    price: model.price ?? 50,
-    price_photo: model.price_photo ?? 50,
-    price_voice: model.price_voice ?? 50,
-    price_video: model.price_video ?? 50,
-    send_voice_chance: model.send_voice_chance ?? 50,
+    ...(model.price !== undefined && { price: model.price }),
+    ...(model.price_photo !== undefined && { price_photo: model.price_photo }),
+    ...(model.price_voice !== undefined && { price_voice: model.price_voice }),
+    ...(model.price_video !== undefined && { price_video: model.price_video }),
+    ...(model.send_voice_chance !== undefined && { send_voice_chance: model.send_voice_chance }),
     ...(model.isActive !== undefined && { is_active: model.isActive }),
   };
 }
